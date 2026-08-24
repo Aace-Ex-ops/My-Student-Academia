@@ -20,11 +20,39 @@ import {
 import { SplineRobot } from "@/components/ui/spline-robot";
 import { AsciiTextAnimation } from "@/components/ui/ascii-text-animation";
 import { User } from "@/types";
+import { apiFetch } from "@/lib/api";
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 interface AuthPageProps {
   currentUser?: User;
   onLoginUser?: (user: User) => void;
   users?: User[];
+}
+
+const GOOGLE_CLIENT_ID =
+  (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) ||
+  "211083986644-uadammltocqmv4unanfsv5p245ut11mc.apps.googleusercontent.com";
+
+// Helper to decode JWT without external dependencies
+function decodeJwt(token: string) {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
 }
 
 export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps) {
@@ -47,6 +75,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
   const [isCustomPhotoUploaded, setIsCustomPhotoUploaded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const googleBtnContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // DOM Refs for GSAP
@@ -66,6 +95,75 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
 
     return () => ctx.revert();
   }, []);
+
+  // ✦ LOAD GOOGLE IDENTITY SERVICES (GSI) SDK SCRIPT ✦
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    const handleCredentialResponse = async (response: any) => {
+      if (!response || !response.credential) return;
+
+      const payload = decodeJwt(response.credential);
+      if (payload) {
+        const name = payload.name || payload.given_name || "Aditya Chatterjee";
+        const emailAddr = payload.email || "aditya.chatterjee@gmail.com";
+        const picture = payload.picture || googlePhotoUrl;
+
+        await handleGoogleSuccess({
+          name,
+          email: emailAddr,
+          picture,
+          googleId: payload.sub,
+        });
+      }
+    };
+
+    // Load Google GSI Script if not already loaded
+    const scriptId = "google-gsi-client-script";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          if (googleBtnContainerRef.current) {
+            window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
+              theme: "filled_black",
+              size: "large",
+              shape: "pill",
+              width: "360",
+              text: "continue_with",
+            });
+          }
+        }
+      };
+      document.body.appendChild(script);
+    } else if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: false,
+      });
+      if (googleBtnContainerRef.current) {
+        window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
+          theme: "filled_black",
+          size: "large",
+          shape: "pill",
+          width: "360",
+          text: "continue_with",
+        });
+      }
+    }
+  }, [googlePhotoUrl]);
 
   const handleFormMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const card = formCardRef.current;
@@ -111,10 +209,30 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
     }
   };
 
-  const handleGoogleSuccess = (userData: { name: string; email: string; picture?: string }) => {
+  const handleGoogleSuccess = async (userData: {
+    name: string;
+    email: string;
+    picture?: string;
+    googleId?: string;
+  }) => {
     const nameToUse = userData.name.trim() || "Aditya Chatterjee";
     const emailToUse = userData.email.trim() || "aditya.chatterjee@gmail.com";
     const photoToUse = userData.picture || googlePhotoUrl;
+
+    try {
+      // Sync to backend DB
+      await apiFetch("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({
+          name: nameToUse,
+          email: emailToUse,
+          avatarUrl: photoToUse,
+          googleId: userData.googleId,
+        }),
+      }).catch((err) => console.warn("Backend Google Sync Note:", err));
+    } catch (e) {
+      console.warn("Backend auth sync skipped:", e);
+    }
 
     const newUser: User = {
       id: `google-user-${Date.now()}`,
@@ -143,6 +261,19 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
     setTimeout(() => {
       navigate("/onboarding");
     }, 800);
+  };
+
+  // Trigger Google One-Tap or native Google Modal
+  const triggerGoogleSignIn = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setIsGoogleModalOpen(true);
+        }
+      });
+    } else {
+      setIsGoogleModalOpen(true);
+    }
   };
 
   // Standard Email/Password Sign Up or Sign In
@@ -348,35 +479,38 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
               onClick={() => handleGoogleSuccess({ name: googleName, email: googleEmail, picture: googlePhotoUrl })}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-blue-600/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
             >
-              <span>Sign In as {googleName || "Aditya Chatterjee"}</span>
+              <span>Confirm & Sign In with Google</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Split Layout */}
+      {/* Main Split Layout: Left Form + Right Interactive 3D Robot */}
       <div className="w-full flex flex-col lg:flex-row min-h-screen">
         
-        {/* Left Side: Auth Form Panel with 3D Mouse Tilt */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-24 z-20 bg-[#09090b]/90">
+        {/* Left Side: Auth Card */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 z-20">
           <div
             ref={formCardRef}
             onMouseMove={handleFormMouseMove}
             onMouseLeave={handleFormMouseLeave}
-            className="max-w-md w-full mx-auto p-8 sm:p-10 rounded-3xl bg-[#121216]/90 border border-white/10 shadow-2xl backdrop-blur-xl space-y-7 text-left"
+            className="w-full max-w-md bg-[#121216]/95 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl space-y-6 relative overflow-hidden"
           >
-            {/* Header Title */}
+            {/* Top Amber Accent Line */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#FF6D1F] to-transparent" />
+
+            {/* Header / Brand Title */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={isSignUp ? "signup-title" : "signin-title"}
-                initial={{ opacity: 0, y: 12 }}
+                key={isSignUp ? "signup-header" : "signin-header"}
+                initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-2"
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-2 text-left"
               >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-[11px] font-black uppercase tracking-wider">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
                   <Bot className="w-3.5 h-3.5" />
                   <span>{isSignUp ? "New Student Enrollment" : "Interactive Student Portal"}</span>
                 </div>
@@ -459,13 +593,9 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#FAF3E1]/50 hover:text-[#FAF3E1] transition-colors cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#FAF3E1]/40 hover:text-[#FAF3E1] transition-colors p-1"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -473,15 +603,15 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-4 rounded-2xl bg-[#FF6D1F] hover:bg-[#e65c10] text-[#FAF3E1] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#FF6D1F]/25 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF6D1F] via-[#ff853f] to-[#FF6D1F] hover:from-[#e65c10] hover:to-[#e65c10] text-[#FAF3E1] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#FF6D1F]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-95 mt-2"
               >
-                <span>{isSignUp ? "Create Student Account" : "Sign In to Portal"}</span>
-                <Zap className="w-4 h-4" />
+                <span>{isSignUp ? "Complete Registration" : "Sign In to Dashboard"}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            {/* Toggle Link */}
-            <div className="text-center text-xs font-medium text-[#FAF3E1]/70">
+            {/* Toggle Mode */}
+            <div className="text-center text-xs text-[#FAF3E1]/60">
               {isSignUp ? (
                 <>
                   Already registered?{" "}
@@ -507,12 +637,23 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
               )}
             </div>
 
-            {/* Google Login Button */}
-            <div className="pt-2">
+            {/* Divider */}
+            <div className="relative flex items-center justify-center my-2">
+              <div className="border-t border-white/10 w-full" />
+              <span className="bg-[#121216] px-3 text-[11px] font-mono text-[#FAF3E1]/40 uppercase tracking-widest absolute">
+                Or Continue With
+              </span>
+            </div>
+
+            {/* Official Google OAuth GSI Button Container */}
+            <div className="pt-2 flex flex-col items-center justify-center gap-2">
+              <div ref={googleBtnContainerRef} className="w-full flex justify-center min-h-[44px]" />
+
+              {/* Fallback & Custom Photo Button */}
               <button
                 type="button"
-                onClick={() => setIsGoogleModalOpen(true)}
-                className="w-full py-3.5 px-4 rounded-2xl bg-[#18181e] hover:bg-[#222228] border border-white/10 text-[#FAF3E1] font-bold text-xs transition-all flex items-center justify-center gap-3 cursor-pointer shadow-md active:scale-95"
+                onClick={triggerGoogleSignIn}
+                className="w-full py-3 px-4 rounded-2xl bg-[#18181e] hover:bg-[#222228] border border-white/10 text-[#FAF3E1] font-bold text-xs transition-all flex items-center justify-center gap-3 cursor-pointer shadow-md active:scale-95"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -532,7 +673,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.59l3.99 3.14c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>Google Sign-In / Custom Photo</span>
               </button>
             </div>
 
