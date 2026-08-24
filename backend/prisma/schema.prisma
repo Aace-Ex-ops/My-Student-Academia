@@ -1,0 +1,120 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  role         String   @default("STUDENT") // STUDENT, INSTRUCTOR, ADMIN
+  studentId    String?  @unique
+  major        String?
+  totalCredits Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  enrollments    Enrollment[]
+  waitlists      Waitlist[]
+  taughtSections CourseSection[] @relation("InstructorSections")
+}
+
+model Department {
+  id      String   @id @default(uuid())
+  code    String   @unique
+  name    String
+  courses Course[]
+}
+
+model Term {
+  id               String          @id @default(uuid())
+  name             String          // e.g. "Fall 2026"
+  isCurrent        Boolean         @default(true)
+  registrationOpen Boolean         @default(true)
+  sections         CourseSection[]
+}
+
+model Course {
+  id           String     @id @default(uuid())
+  code         String     @unique // e.g. "CS101"
+  title        String     // e.g. "Intro to Computer Science"
+  description  String
+  credits      Int        @default(4)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  sections      CourseSection[]
+  prerequisites Prerequisite[]  @relation("CoursePrereqs")
+  requiredFor   Prerequisite[]  @relation("PrereqFor")
+}
+
+model Prerequisite {
+  id             String @id @default(uuid())
+  courseId       String
+  prereqCourseId String
+
+  course       Course @relation("CoursePrereqs", fields: [courseId], references: [id], onDelete: Cascade)
+  prereqCourse Course @relation("PrereqFor", fields: [prereqCourseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, prereqCourseId])
+}
+
+model CourseSection {
+  id            String   @id @default(uuid())
+  courseId      String
+  sectionNumber String   @default("01")
+  termId        String
+  instructorId  String?
+  maxCapacity   Int      @default(30)
+  room          String   @default("Hall A")
+
+  course     Course         @relation(fields: [courseId], references: [id])
+  term       Term           @relation(fields: [termId], references: [id])
+  instructor User?          @relation("InstructorSections", fields: [instructorId], references: [id])
+  
+  slots       ScheduleSlot[]
+  enrollments Enrollment[]
+  waitlists   Waitlist[]
+}
+
+model ScheduleSlot {
+  id        String  @id @default(uuid())
+  sectionId String
+  userId    String? // Optional: student-specific slot customization
+  day       String  // MON, TUE, WED, THU, FRI
+  startTime String  // Format "09:00"
+  endTime   String  // Format "10:30"
+
+  section CourseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
+
+model Enrollment {
+  id           String   @id @default(uuid())
+  userId       String
+  sectionId    String
+  status       String   @default("ENROLLED") // ENROLLED, DROPPED, COMPLETED
+  grade        String?
+  registeredAt DateTime @default(now())
+
+  user    User          @relation(fields: [userId], references: [id])
+  section CourseSection @relation(fields: [sectionId], references: [id])
+
+  @@unique([userId, sectionId])
+}
+
+model Waitlist {
+  id        String   @id @default(uuid())
+  userId    String
+  sectionId String
+  position  Int
+  createdAt DateTime @default(now())
+
+  user    User          @relation(fields: [userId], references: [id])
+  section CourseSection @relation(fields: [sectionId], references: [id])
+
+  @@unique([userId, sectionId])
+}

@@ -1,0 +1,15 @@
+{
+  "name": "my-student-academia",
+  "version": "1.0.0",
+  "description": "Course Registration Management Web Application",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && npx prisma db seed",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
