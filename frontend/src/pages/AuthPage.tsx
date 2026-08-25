@@ -12,13 +12,11 @@ import {
   ShieldCheck,
   Bot,
   UserPlus,
-  Sparkles,
   Lock,
   Mail,
   User as UserIcon,
   Check,
 } from "lucide-react";
-import { HolographicRobotExperience } from "@/components/ui/holographic-robot-experience";
 import { SplineRobot } from "@/components/ui/spline-robot";
 import { AsciiTextAnimation } from "@/components/ui/ascii-text-animation";
 import { User } from "@/types";
@@ -82,7 +80,6 @@ function saveRegisteredAccount(user: User) {
 export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [useSplineView, setUseSplineView] = useState(false);
 
   // Form State
   const [fullName, setFullName] = useState("");
@@ -790,7 +787,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
           </div>
         </div>
 
-        {/* Right Side: Ultra-High-Performance 3D Cybernetic Hero Panel */}
+        {/* Right Side: The 3D Interactive Robot Hero Panel */}
         <div className="hidden lg:flex w-1/2 relative bg-[#09090b] items-center justify-center overflow-hidden border-l border-white/10">
           
           {/* Spotlight Ambient Glow */}
@@ -805,31 +802,12 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
             />
           </div>
 
-          {/* 3D Scene View Toggle (Holographic WebGL 120 FPS vs Spline) */}
-          <div className="absolute top-8 left-8 z-30 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setUseSplineView(!useSplineView)}
-              className="px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/90 border border-white/10 text-[10px] font-mono font-bold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3 h-3 text-[#FF6D1F]" />
-              <span>{useSplineView ? "Switch to 120 FPS WebGL Engine" : "Switch to Spline 3D Scene"}</span>
-            </button>
-          </div>
-
-          {/* 3D Scene Rendering */}
+          {/* Interactive Spline 3D Robot Scene */}
           <div className="relative z-10 w-full h-full min-h-[600px] flex items-center justify-center">
-            {useSplineView ? (
-              <SplineRobot
-                scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-                className="w-full h-full"
-              />
-            ) : (
-              <HolographicRobotExperience
-                className="w-full h-full"
-                isSignUp={isSignUp}
-              />
-            )}
+            <SplineRobot
+              scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+              className="w-full h-full"
+            />
           </div>
 
         </div>
