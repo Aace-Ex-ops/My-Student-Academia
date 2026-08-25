@@ -195,10 +195,6 @@ export function GsapBentoShowcase() {
         
         {/* Section Header */}
         <div ref={headerRef} className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>GSAP Powered Core Engine</span>
-          </div>
           <h2 className="text-3xl sm:text-5xl font-black text-[#FAF3E1] tracking-tight leading-tight">
             Engineered for <span className="text-[#FF6D1F]">Academic Speed</span> & Precision
           </h2>

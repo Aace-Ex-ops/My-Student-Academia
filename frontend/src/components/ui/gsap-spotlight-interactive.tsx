@@ -125,10 +125,6 @@ export function GsapSpotlightInteractive() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Interactive 3D GSAP Showcase</span>
-            </div>
             <h2 className="text-3xl sm:text-5xl font-black text-[#FAF3E1] tracking-tight leading-tight">
               Designed for the Next Generation of <span className="text-[#FF6D1F]">Academia</span>
             </h2>

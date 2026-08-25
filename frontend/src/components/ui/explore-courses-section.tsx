@@ -340,11 +340,6 @@ export function ExploreCoursesSection() {
           className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6"
         >
           <div className="text-left max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Truly Infinite Ticker</span>
-            </div>
-
             <h2 className="text-3xl sm:text-5xl font-black text-[#FAF3E1] tracking-tight">
               Explore Academic & <span className="text-[#FF6D1F]">Paid Pro Courses</span>
             </h2>

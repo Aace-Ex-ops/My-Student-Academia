@@ -98,38 +98,6 @@ export default function Footer4() {
     return () => ctx.revert();
   }, []);
 
-  // GSAP 3D Interactive Card Hover Tilt for Brand Card
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-
-    const rotX = (y / (rect.height / 2)) * -6;
-    const rotY = (x / (rect.width / 2)) * 6;
-
-    gsap.to(card, {
-      rotationX: rotX,
-      rotationY: rotY,
-      transformPerspective: 1000,
-      scale: 1.01,
-      duration: 0.35,
-      ease: "power2.out",
-      overwrite: "auto",
-    });
-  };
-
-  const handleCardMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    gsap.to(e.currentTarget, {
-      rotationX: 0,
-      rotationY: 0,
-      scale: 1,
-      duration: 0.5,
-      ease: "power2.out",
-      overwrite: "auto",
-    });
-  };
-
   return (
     <section ref={sectionRef} className="py-16 px-4 bg-[#FAF3E1] border-t border-[#F5E7C6] select-none">
       <div className="container mx-auto max-w-7xl">
@@ -138,9 +106,7 @@ export default function Footer4() {
           {/* Brand Accent Card (Left Panel) */}
           <div
             ref={leftCardRef}
-            onMouseMove={handleCardMouseMove}
-            onMouseLeave={handleCardMouseLeave}
-            className="relative w-full md:w-1/3 min-h-[350px] md:min-h-[550px] overflow-hidden rounded-3xl bg-gradient-to-br from-[#222222] via-[#222222] to-[#FF6D1F]/90 flex flex-col justify-between p-8 md:p-10 shadow-2xl text-[#FAF3E1] cursor-pointer"
+            className="relative w-full md:w-1/3 min-h-[350px] md:min-h-[550px] overflow-hidden rounded-3xl bg-gradient-to-br from-[#222222] via-[#222222] to-[#FF6D1F]/90 flex flex-col justify-between p-8 md:p-10 shadow-2xl text-[#FAF3E1]"
           >
             {/* SVG Noise & Pattern Overlay */}
             <svg

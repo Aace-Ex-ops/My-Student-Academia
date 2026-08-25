@@ -147,10 +147,6 @@ export function AcademicGallerySection() {
           
           {/* LEFT SIDE CONTENT WITH GSAP REVEAL */}
           <div ref={leftContentRef} className="lg:col-span-5 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Empower & Excel</span>
-            </div>
 
             <h2 className="text-3xl sm:text-5xl font-black text-[#FAF3E1] leading-tight tracking-tight">
               Scale Your Academic Potential Through <span className="text-[#FF6D1F]">Innovation</span>
