@@ -55,45 +55,18 @@ function decodeJwt(token: string) {
 // Local storage registry key for offline / persistent registered accounts
 const REGISTERED_USERS_KEY = "msa_registered_accounts_registry";
 
-// Default pre-verified student accounts
+// Only real, existing student accounts exist by default
 const DEFAULT_PREVERIFIED_ACCOUNTS: Record<string, User> = {
-  "aditya.chatterjee@gmail.com": {
-    id: "student-aditya-01",
+  "achatt4u@gmail.com": {
+    id: "student-aditya-achatt4u",
     name: "Aditya Chatterjee",
-    email: "aditya.chatterjee@gmail.com",
-    username: "@aditya_chatterjee",
+    email: "achatt4u@gmail.com",
+    username: "@aditya_c",
     role: "STUDENT",
     studentId: "STU-2026-IITKGP",
     university: "Indian Institute of Technology (IIT) Kharagpur",
     major: "Computer Science & Engineering",
     phone: "+91 9876543210",
-    avatar: "scholar",
-    avatarIcon: "👨‍🎓",
-    avatarBg: "from-amber-500 to-orange-600",
-  },
-  "achatt4u@gmail.com": {
-    id: "student-aditya-02",
-    name: "Aditya Chatterjee",
-    email: "achatt4u@gmail.com",
-    username: "@aditya_c",
-    role: "STUDENT",
-    studentId: "STU-2026-IITKGP-2",
-    university: "Indian Institute of Technology (IIT) Kharagpur",
-    major: "Computer Science & Engineering",
-    phone: "+91 9876543210",
-    avatar: "scholar",
-    avatarIcon: "👨‍🎓",
-    avatarBg: "from-amber-500 to-orange-600",
-  },
-  "alex.chen@academia.edu": {
-    id: "user-1",
-    name: "Alex Chen",
-    email: "alex.chen@academia.edu",
-    username: "@alex_chen",
-    role: "STUDENT",
-    studentId: "STU-2026-001",
-    university: "Stanford University",
-    major: "Computer Science",
     avatar: "scholar",
     avatarIcon: "👨‍🎓",
     avatarBg: "from-amber-500 to-orange-600",
@@ -124,7 +97,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Form State - empty by default so user enters their own details
+  // Form State - starts clean & empty
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -166,7 +139,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       const payload = decodeJwt(response.credential);
       if (payload) {
         const name = payload.name || payload.given_name || "Aditya Chatterjee";
-        const emailAddr = payload.email || "aditya.chatterjee@gmail.com";
+        const emailAddr = payload.email || "achatt4u@gmail.com";
         const picture =
           payload.picture ||
           "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
@@ -342,10 +315,9 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       try {
         window.google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Graceful fallback Google auto-auth
             handleGoogleSuccess({
               name: "Aditya Chatterjee",
-              email: "aditya.chatterjee@gmail.com",
+              email: "achatt4u@gmail.com",
               picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
             });
           }
@@ -356,10 +328,9 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       }
     }
 
-    // Direct verified Google login trigger
     handleGoogleSuccess({
       name: "Aditya Chatterjee",
-      email: "aditya.chatterjee@gmail.com",
+      email: "achatt4u@gmail.com",
       picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
     });
   };
@@ -379,7 +350,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
     if (!validation.isValid || !validation.isCertified) {
       setErrorMessage(
         validation.error ||
-          "Please enter a valid, certified institutional or student email address (e.g. your Gmail or university email)."
+          "Please enter a valid email address (e.g. your existing Gmail or university email)."
       );
       return;
     }
@@ -441,7 +412,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       localStorage.setItem("msa_custom_user_profile", JSON.stringify(newUser));
 
       setIsLoading(false);
-      setNotification(`Certified Account Created for ${nameToUse}! Redirecting...`);
+      setNotification(`Account Created for ${nameToUse}! Redirecting...`);
 
       setTimeout(() => {
         navigate("/onboarding");
@@ -449,11 +420,11 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
 
     } else {
       // ══════════════════════════════════════════════════
-      // ✦ SIGN IN / LOGIN LOGIC
+      // ✦ SIGN IN / LOGIN LOGIC (CREATED & REGISTERED EMAILS ONLY)
       // ══════════════════════════════════════════════════
       let authenticatedUser: User | null = null;
 
-      // 1. Check local registered accounts registry (including pre-verified accounts)
+      // 1. Check registered accounts registry
       const registry = getRegisteredAccounts();
       if (registry[emailToUse]) {
         authenticatedUser = registry[emailToUse];
@@ -482,12 +453,12 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
         }
       }
 
-      // 3. If account does not exist, reject and provide instant 1-click registration
+      // 3. If account does not exist, reject non-existing email and prompt creation
       if (!authenticatedUser) {
         setIsLoading(false);
         setShowCreatePromptForEmail(emailToUse);
         setErrorMessage(
-          `No account found with ${emailToUse}. Only created accounts can log in.`
+          `No account found with ${emailToUse}. Only existing created accounts can log in.`
         );
         return;
       }
@@ -565,7 +536,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
               >
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-black uppercase tracking-wider">
                   <Bot className="w-3.5 h-3.5" />
-                  <span>{isSignUp ? "Certified Student Enrollment" : "Interactive Student Portal"}</span>
+                  <span>{isSignUp ? "Student Enrollment" : "Interactive Student Portal"}</span>
                 </div>
 
                 <h1 className="text-3xl font-black tracking-tight text-[#FAF3E1]">
@@ -573,8 +544,8 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                 </h1>
                 <p className="text-xs sm:text-sm text-[#FAF3E1]/70 font-medium">
                   {isSignUp
-                    ? "Enter your valid student/Gmail address to register your account"
-                    : "Enter your registered credentials to access your student portal"}
+                    ? "Enter your existing Gmail or student email to create an account"
+                    : "Enter your registered email to access your student portal"}
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -653,7 +624,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                 </div>
                 <input
                   type="email"
-                  placeholder="student@university.edu or name@gmail.com"
+                  placeholder="e.g. achatt4u@gmail.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

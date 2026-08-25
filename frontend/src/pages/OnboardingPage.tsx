@@ -258,14 +258,14 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
     currentUser?.name || "Aditya Chatterjee"
   );
   const [displayEmail, setDisplayEmail] = useState(
-    currentUser?.email || "aditya.chatterjee@gmail.com"
+    currentUser?.email || "achatt4u@gmail.com"
   );
   const [username, setUsername] = useState(
     currentUser?.username
       ? currentUser.username.replace(/^@/, "")
       : currentUser?.name
       ? currentUser.name.toLowerCase().replace(/\s+/g, "_")
-      : "aditya_chatterjee"
+      : "aditya_c"
   );
   const [university, setUniversity] = useState(
     currentUser?.university || "Indian Institute of Technology (IIT) Kharagpur"
