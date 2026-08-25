@@ -398,15 +398,8 @@ export function HeroMasterpiece({ onLoginClick }: HeroMasterpieceProps) {
         </div>
       </div>
 
-      {/* TOP TELEMETRY HUD BAR */}
-      <div className="relative z-20 flex items-center justify-between w-full border-b border-[#F5E7C6]/15 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FF6D1F] animate-ping" />
-          <span className="text-xs font-mono font-black text-[#FF6D1F] tracking-widest uppercase">
-            MY_STUDENT_ACADEMIA // HERO_STAGE
-          </span>
-        </div>
-
+      {/* TOP HEADER */}
+      <div className="relative z-20 flex items-center justify-end w-full border-b border-[#F5E7C6]/15 pb-4">
         <div className="flex items-center gap-4">
           <button
             onClick={handleLogin}
@@ -420,13 +413,6 @@ export function HeroMasterpiece({ onLoginClick }: HeroMasterpieceProps) {
 
       {/* CENTER HERO COPY & ACTION BUTTONS */}
       <div className="relative z-20 max-w-5xl mx-auto text-center flex flex-col items-center justify-center my-auto py-12 space-y-6">
-        
-        {/* Kinetic Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black uppercase tracking-wider shadow-lg">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Next-Generation Academic Platform</span>
-        </div>
-
         {/* Title */}
         <h1
           ref={titleRef}
@@ -521,12 +507,7 @@ export function HeroMasterpiece({ onLoginClick }: HeroMasterpieceProps) {
 
       </div>
 
-      {/* BOTTOM TELEMETRY FOOTER */}
-      <div className="relative z-20 flex flex-col sm:flex-row items-center justify-between w-full border-t border-[#F5E7C6]/15 pt-4 text-xs font-mono text-[#FAF3E1]/60">
-        <div>SYSTEM: ONLINE // MULTI_SLOT_V2</div>
-        <div className="text-[#FF6D1F] font-bold">LATENCY: 0.4ms // 0_CONFLICTS</div>
-        <div>CAMPUS_STATUS: ACTIVE</div>
-      </div>
+
     </section>
   );
 }

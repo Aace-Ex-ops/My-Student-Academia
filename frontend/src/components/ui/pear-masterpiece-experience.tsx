@@ -437,14 +437,9 @@ export function PearMasterpieceExperience() {
           </div>
         </div>
 
-        {/* TOP TELEMETRY HUD BAR (ALL 5 CHAPTERS SYNCHRONIZED) */}
+        {/* TOP CHAPTER SELECTOR BAR (ALL 5 CHAPTERS SYNCHRONIZED) */}
         <div className="relative z-20 flex items-center justify-between w-full border-b border-[#F5E7C6]/15 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#FF6D1F] animate-ping" />
-            <span className="text-xs font-mono font-black text-[#FF6D1F] tracking-widest uppercase">
-              MSA_ENGINE // 5_CHAPTER_STAGE
-            </span>
-          </div>
+          <div className="hidden sm:block w-24" />
 
           {/* Chapter Indicators (CH.01 to CH.05 Synchronized Glass Pill Buttons) */}
           <div className="flex items-center gap-2 sm:gap-3 text-xs font-mono font-bold text-[#FAF3E1]/70">
@@ -649,15 +644,6 @@ export function PearMasterpieceExperience() {
 
           </div>
 
-        </div>
-
-        {/* BOTTOM HUD STATUS BAR */}
-        <div className="relative z-20 flex items-center justify-between w-full border-t border-[#F5E7C6]/15 pt-4 text-[11px] font-mono text-[#FAF3E1]/50">
-          <div>PEAR_STYLE // MY STUDENT ACADEMIA V2.0</div>
-          <div className="text-[#FF6D1F] font-bold">
-            ACTIVE_CHAPTER: {currentChapter.chapterNum} // 05
-          </div>
-          <div>SCROLL_PROGRESS: {Math.round(((activeChapter + 1) / CHAPTER_DATA.length) * 100)}%</div>
         </div>
       </div>
     </div>
