@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,7 +17,6 @@ import {
   Mail,
   User as UserIcon,
   Check,
-  Zap,
 } from "lucide-react";
 import { HolographicRobotExperience } from "@/components/ui/holographic-robot-experience";
 import { SplineRobot } from "@/components/ui/spline-robot";
@@ -99,12 +98,9 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // DOM Refs for GSAP quickTo physics
+  // DOM Refs
   const formCardRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
-  const cardRectRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
-  const quickRotX = useRef<gsap.QuickToFunc | null>(null);
-  const quickRotY = useRef<gsap.QuickToFunc | null>(null);
 
   // Live Password Strength Computation
   const passwordStrength = useMemo(() => {
@@ -154,58 +150,17 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     return null;
   }, [email]);
 
-  // Initialize GSAP QuickTo for 120 FPS card tilt physics
+  // Smooth entrance fade-in
   useEffect(() => {
     const card = formCardRef.current;
     if (!card) return;
 
-    quickRotX.current = gsap.quickTo(card, "rotationX", {
-      duration: 0.35,
-      ease: "power2.out",
-    });
-    quickRotY.current = gsap.quickTo(card, "rotationY", {
-      duration: 0.35,
-      ease: "power2.out",
-    });
-
     gsap.fromTo(
       card,
-      { opacity: 0, y: 30, scale: 0.97 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.75, ease: "power3.out" }
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }
     );
   }, []);
-
-  const handlePointerEnter = () => {
-    if (formCardRef.current) {
-      cardRectRef.current = formCardRef.current.getBoundingClientRect();
-    }
-  };
-
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!cardRectRef.current || !quickRotX.current || !quickRotY.current || !formCardRef.current) return;
-    const rect = cardRectRef.current;
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-
-    const rotX = (y / (rect.height / 2)) * -5;
-    const rotY = (x / (rect.width / 2)) * 5;
-
-    quickRotX.current(rotX);
-    quickRotY.current(rotY);
-
-    // Dynamic specular reflection tracking
-    const mouseXPercent = ((e.clientX - rect.left) / rect.width) * 100;
-    const mouseYPercent = ((e.clientY - rect.top) / rect.height) * 100;
-    formCardRef.current.style.setProperty("--shine-x", `${mouseXPercent}%`);
-    formCardRef.current.style.setProperty("--shine-y", `${mouseYPercent}%`);
-  }, []);
-
-  const handlePointerLeave = () => {
-    if (quickRotX.current && quickRotY.current) {
-      quickRotX.current(0);
-      quickRotY.current(0);
-    }
-  };
 
   // ✦ LOAD GOOGLE IDENTITY SERVICES (GSI) SDK SCRIPT ✦
   useEffect(() => {
@@ -216,7 +171,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
 
       const payload = decodeJwt(response.credential);
       if (payload) {
-        const name = payload.name || payload.given_name || "Student";
+        const name = payload.name || payload.given_name || "Aditya Chatterjee";
         const emailAddr = payload.email || "";
         const picture =
           payload.picture ||
@@ -555,28 +510,12 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       {/* Main Split Layout: Left Form + Right Interactive 3D Robot */}
       <div className="w-full flex flex-col lg:flex-row min-h-screen">
         
-        {/* Left Side: Auth Card Container */}
+        {/* Left Side: Solid Still Auth Card Container */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 lg:p-12 z-20 overflow-y-auto max-h-screen">
           <div
             ref={formCardRef}
-            onPointerEnter={handlePointerEnter}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
-            style={{
-              willChange: "transform",
-              transformStyle: "preserve-3d",
-            }}
-            className="w-full max-w-[440px] bg-[#121216]/95 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.9)] backdrop-blur-2xl space-y-5 relative overflow-hidden transition-shadow hover:shadow-[0_0_50px_rgba(255,109,31,0.15)]"
+            className="w-full max-w-[440px] bg-[#121216] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-5 relative overflow-hidden"
           >
-            {/* Dynamic Specular Reflection Hover Highlight */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-40 transition-opacity duration-300 group-hover:opacity-100 rounded-3xl"
-              style={{
-                background:
-                  "radial-gradient(400px circle at var(--shine-x, 50%) var(--shine-y, 50%), rgba(255,109,31,0.12), transparent 80%)",
-              }}
-            />
-
             {/* Top Amber Accent Line */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#FF6D1F] to-transparent" />
 
