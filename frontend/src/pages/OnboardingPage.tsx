@@ -250,22 +250,29 @@ const majorCareerMap: Record<string, string[]> = {
 export function OnboardingPage({ currentUser, onCompleteOnboarding }: OnboardingPageProps) {
   const navigate = useNavigate();
 
+  // Protect onboarding - redirect to /auth if user has not logged in or signed up
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/auth");
+    }
+  }, [currentUser, navigate]);
+
   // Multi-step State (1 to 5)
   const [step, setStep] = useState(1);
 
   // Form State
   const [displayName, setDisplayName] = useState(
-    currentUser?.name || "Aditya Chatterjee"
+    currentUser?.name || ""
   );
   const [displayEmail, setDisplayEmail] = useState(
-    currentUser?.email || "achatt4u@gmail.com"
+    currentUser?.email || ""
   );
   const [username, setUsername] = useState(
     currentUser?.username
       ? currentUser.username.replace(/^@/, "")
       : currentUser?.name
       ? currentUser.name.toLowerCase().replace(/\s+/g, "_")
-      : "aditya_c"
+      : ""
   );
   const [university, setUniversity] = useState(
     currentUser?.university || "Indian Institute of Technology (IIT) Kharagpur"
@@ -277,7 +284,7 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
   // Contact Details
   const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
   const [phoneDigits, setPhoneDigits] = useState(
-    currentUser?.phone ? currentUser.phone.replace(/^\+\d+\s*/, "") : "9876543210"
+    currentUser?.phone ? currentUser.phone.replace(/^\+\d+\s*/, "") : ""
   );
 
   // Academic Standing

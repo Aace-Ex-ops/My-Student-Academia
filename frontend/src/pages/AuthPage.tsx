@@ -314,24 +314,16 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       try {
         window.google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            handleGoogleSuccess({
-              name: "Aditya Chatterjee",
-              email: "achatt4u@gmail.com",
-              picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
-            });
+            setErrorMessage("Google Sign-In prompt was closed. Please use the official Google button above or register via Sign Up.");
           }
         });
         return;
       } catch (e) {
-        console.warn("GSI prompt error, fallback:", e);
+        console.warn("GSI prompt error:", e);
       }
     }
 
-    handleGoogleSuccess({
-      name: "Aditya Chatterjee",
-      email: "achatt4u@gmail.com",
-      picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
-    });
+    setErrorMessage("Google Sign-In is initializing. Please click the official Google button above or create an account below.");
   };
 
   // ✦ STANDARD REGISTRATION & LOGIN SUBMISSION HANDLER ✦
