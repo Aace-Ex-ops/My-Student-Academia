@@ -55,23 +55,8 @@ function decodeJwt(token: string) {
 // Local storage registry key for offline / persistent registered accounts
 const REGISTERED_USERS_KEY = "msa_registered_accounts_registry";
 
-// Only real, existing student accounts exist by default
-const DEFAULT_PREVERIFIED_ACCOUNTS: Record<string, User> = {
-  "achatt4u@gmail.com": {
-    id: "student-aditya-achatt4u",
-    name: "Aditya Chatterjee",
-    email: "achatt4u@gmail.com",
-    username: "@aditya_c",
-    role: "STUDENT",
-    studentId: "STU-2026-IITKGP",
-    university: "Indian Institute of Technology (IIT) Kharagpur",
-    major: "Computer Science & Engineering",
-    phone: "+91 9876543210",
-    avatar: "scholar",
-    avatarIcon: "👨‍🎓",
-    avatarBg: "from-amber-500 to-orange-600",
-  },
-};
+// Clean fresh start: No mock or fake pre-verified accounts
+const DEFAULT_PREVERIFIED_ACCOUNTS: Record<string, User> = {};
 
 function getRegisteredAccounts(): Record<string, User> {
   try {
@@ -79,7 +64,7 @@ function getRegisteredAccounts(): Record<string, User> {
     const localRegistry: Record<string, User> = data ? JSON.parse(data) : {};
     return { ...DEFAULT_PREVERIFIED_ACCOUNTS, ...localRegistry };
   } catch {
-    return { ...DEFAULT_PREVERIFIED_ACCOUNTS };
+    return {};
   }
 }
 
@@ -97,7 +82,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Form State - starts clean & empty
+  // Form State - starts completely clean & empty
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -139,17 +124,19 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       const payload = decodeJwt(response.credential);
       if (payload) {
         const name = payload.name || payload.given_name || "Aditya Chatterjee";
-        const emailAddr = payload.email || "achatt4u@gmail.com";
+        const emailAddr = payload.email || "";
         const picture =
           payload.picture ||
           "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
 
-        await handleGoogleSuccess({
-          name,
-          email: emailAddr,
-          picture,
-          googleId: payload.sub,
-        });
+        if (emailAddr) {
+          await handleGoogleSuccess({
+            name,
+            email: emailAddr,
+            picture,
+            googleId: payload.sub,
+          });
+        }
       }
     };
 
@@ -350,7 +337,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
     if (!validation.isValid || !validation.isCertified) {
       setErrorMessage(
         validation.error ||
-          "Please enter a valid email address (e.g. your existing Gmail or university email)."
+          "Please enter a valid email address (e.g. your Gmail or student email)."
       );
       return;
     }
@@ -362,6 +349,11 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       // ✦ SIGN UP / CREATE ACCOUNT LOGIC
       // ══════════════════════════════════════════════════
       const registry = getRegisteredAccounts();
+      if (registry[emailToUse]) {
+        setIsLoading(false);
+        setErrorMessage("An account with this email already exists. Please sign in.");
+        return;
+      }
 
       let backendUser: any = null;
       try {
@@ -453,12 +445,12 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
         }
       }
 
-      // 3. If account does not exist, reject non-existing email and prompt creation
+      // 3. If account does not exist, reject and prompt creation
       if (!authenticatedUser) {
         setIsLoading(false);
         setShowCreatePromptForEmail(emailToUse);
         setErrorMessage(
-          `No account found with ${emailToUse}. Only existing created accounts can log in.`
+          `No account found with ${emailToUse}. Only created accounts can log in.`
         );
         return;
       }
@@ -544,8 +536,8 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                 </h1>
                 <p className="text-xs sm:text-sm text-[#FAF3E1]/70 font-medium">
                   {isSignUp
-                    ? "Enter your existing Gmail or student email to create an account"
-                    : "Enter your registered email to access your student portal"}
+                    ? "Enter your email to create a new student account"
+                    : "Enter your registered credentials to access your student portal"}
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -618,7 +610,7 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
                   </label>
                   {isSignUp && (
                     <span className="text-[10px] font-mono text-[#FF6D1F] flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> Valid Emails Only
+                      <ShieldCheck className="w-3 h-3" /> Real Emails Only
                     </span>
                   )}
                 </div>

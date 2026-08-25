@@ -49,11 +49,8 @@ export function AppContent() {
         }
       }
 
-      if (json.length > 0) {
-        // Default to student Alex Chen if found
-        const defaultStudent = json.find((u: any) => u.role === 'STUDENT') || json[0];
-        setCurrentUser(defaultStudent);
-      }
+      // Only use explicitly logged in user from localStorage
+
     } catch (err) {
       console.error('Failed to load users', err);
     }

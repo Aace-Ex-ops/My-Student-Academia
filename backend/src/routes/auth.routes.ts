@@ -5,7 +5,7 @@ import { validateCertifiedEmail } from '../utils/emailValidator';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get demo users list
+// Get users list
 router.get('/users', async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
@@ -29,7 +29,7 @@ router.post('/register', async (req: Request, res: Response) => {
   const validation = validateCertifiedEmail(email);
   if (!validation.isValid || !validation.isCertified) {
     return res.status(400).json({
-      error: validation.error || 'Only valid and certified institutional/student email addresses can create an account.'
+      error: validation.error || 'Only valid and certified student email addresses can create an account.'
     });
   }
 
@@ -54,18 +54,8 @@ router.post('/register', async (req: Request, res: Response) => {
         name: userName,
         email: normalizedEmail,
         role: 'STUDENT',
-      }
-    });
-
-    // 4. Create Student record
-    const dept = await prisma.department.findFirst();
-    const student = await prisma.student.create({
-      data: {
-        userId: user.id,
-        matricNo: `MSA-${Date.now().toString().slice(-6)}`,
-        maxCredits: 18,
-        currentTerm: 'Fall 2026',
-        departmentId: dept ? dept.id : '1eff8088-0bc9-4644-8501-1af1f248a9e2'
+        studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
+        major: 'Computer Science & Engineering',
       }
     });
 
@@ -76,7 +66,7 @@ router.post('/register', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        studentId: student.id,
+        studentId: user.studentId,
         avatar: 'scholar',
         avatarIcon: '👨‍🎓',
         avatarBg: 'from-amber-500 to-orange-600',
@@ -107,25 +97,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(404).json({
-        error: 'Access Denied: No account found with this email. Only registered students can log in. Please create an account first.'
-      });
-    }
-
-    // 2. Fetch or create student record for complete session
-    let student = await prisma.student.findUnique({
-      where: { userId: user.id }
-    });
-
-    if (!student) {
-      const dept = await prisma.department.findFirst();
-      student = await prisma.student.create({
-        data: {
-          userId: user.id,
-          matricNo: `MSA-${Date.now().toString().slice(-6)}`,
-          maxCredits: 18,
-          currentTerm: 'Fall 2026',
-          departmentId: dept ? dept.id : '1eff8088-0bc9-4644-8501-1af1f248a9e2'
-        }
+        error: 'Access Denied: No account found with this email. Only created accounts can log in. Please create an account first.'
       });
     }
 
@@ -136,7 +108,7 @@ router.post('/login', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        studentId: student.id,
+        studentId: user.studentId,
         avatar: 'scholar',
         avatarIcon: '👨‍🎓',
         avatarBg: 'from-amber-500 to-orange-600',
@@ -180,24 +152,8 @@ router.post('/google', async (req: Request, res: Response) => {
           name: userName,
           email: normalizedEmail,
           role: 'STUDENT',
-        }
-      });
-    }
-
-    // 2. Ensure corresponding Student record exists
-    let student = await prisma.student.findUnique({
-      where: { userId: user.id }
-    });
-
-    if (!student) {
-      const dept = await prisma.department.findFirst();
-      student = await prisma.student.create({
-        data: {
-          userId: user.id,
-          matricNo: `MSA-${Date.now().toString().slice(-6)}`,
-          maxCredits: 18,
-          currentTerm: 'Fall 2026',
-          departmentId: dept ? dept.id : '1eff8088-0bc9-4644-8501-1af1f248a9e2'
+          studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
+          major: 'Computer Science & Engineering',
         }
       });
     }
@@ -210,13 +166,26 @@ router.post('/google', async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         avatarUrl: avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-        studentId: student.id,
+        studentId: user.studentId,
       },
       token: `google-jwt-${user.id}-${Date.now()}`
     });
   } catch (error) {
     console.error('Google Auth Error:', error);
     res.status(500).json({ error: 'Failed to authenticate with Google' });
+  }
+});
+
+// ✦ WIPE DATABASE USERS (ADMIN/RESET ENDPOINT) ✦
+router.post('/wipe-all-users', async (req: Request, res: Response) => {
+  try {
+    await prisma.waitlist.deleteMany({});
+    await prisma.enrollment.deleteMany({});
+    await prisma.courseSection.updateMany({ data: { instructorId: null } });
+    const deleted = await prisma.user.deleteMany({});
+    res.json({ message: 'All users wiped successfully', count: deleted.count });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to wipe users' });
   }
 });
 
