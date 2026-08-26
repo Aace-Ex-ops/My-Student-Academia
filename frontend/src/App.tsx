@@ -13,7 +13,7 @@ import { InstructorPage } from './pages/InstructorPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 
-const MSA_SESSION_VERSION = "v2026_08_26_clean_prod";
+const MSA_SESSION_VERSION = "v2026_08_26_fresh_zero";
 
 export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
