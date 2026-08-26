@@ -252,7 +252,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     setErrorMessage(null);
     setShowCreatePromptForEmail(null);
     const emailToUse = userData.email.trim().toLowerCase();
-    const nameToUse = userData.name.trim() || "Student";
+    const nameToUse = userData.name.trim() || emailToUse.split("@")[0] || "Student";
     const photoToUse =
       userData.picture ||
       "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
@@ -266,32 +266,21 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       return;
     }
 
-    // 1. Check if this account is ALREADY registered in local registry or backend DB
+    // 1. Strictly query backend DB to check if this user account exists
     let existingUser: User | null = null;
-    const registry = getRegisteredAccounts();
-    if (registry[emailToUse]) {
-      existingUser = registry[emailToUse];
-    }
-
-    if (!existingUser) {
-      try {
-        const res = await apiFetch("/api/auth/login", {
-          method: "POST",
-          body: JSON.stringify({
-            email: emailToUse,
-            password: "oauth-user-check-probe",
-          }),
-        });
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          if (res.ok && data.user) {
-            existingUser = data.user;
-          }
+    try {
+      const res = await apiFetch("/api/auth/check-user", {
+        method: "POST",
+        body: JSON.stringify({ email: emailToUse }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists && data.user) {
+          existingUser = data.user;
         }
-      } catch (err) {
-        console.warn("Backend Google check note:", err);
       }
+    } catch (err) {
+      console.warn("Backend check-user error:", err);
     }
 
     if (existingUser) {
@@ -315,7 +304,16 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       }, 600);
 
     } else {
-      // ✦ FIRST-TIME USER: DO NOT log in directly! ✦
+      // ✦ FIRST-TIME USER (Not in database): DO NOT log in directly! ✦
+      // Purge any stale cache for this email
+      try {
+        const reg = getRegisteredAccounts();
+        if (reg[emailToUse]) {
+          delete reg[emailToUse];
+          localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(reg));
+        }
+      } catch (e) {}
+
       // Switch to 'Create Account' tab, pre-fill Name & Email, and prompt user to set & confirm password!
       setIsSignUp(true);
       setFullName(nameToUse);
@@ -326,7 +324,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       setErrorMessage(null);
       setShowCreatePromptForEmail(null);
       setNotification(
-        `Google Account verified (${emailToUse})! Please set and confirm your custom password to complete registration.`
+        `Google Account verified (${emailToUse})! Please set and confirm your custom password to complete account registration.`
       );
     }
   };
@@ -847,35 +845,9 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
               </span>
             </div>
 
-            {/* Official Google OAuth GSI Button Container + Interactive Button */}
-            <div className="flex flex-col items-center justify-center gap-2 w-full">
+            {/* Official Google OAuth GSI Button Container */}
+            <div className="flex flex-col items-center justify-center gap-2 w-full pt-1">
               <div ref={googleBtnContainerRef} className="w-full flex justify-center min-h-[44px]" />
-
-              <button
-                type="button"
-                onClick={triggerGoogleSignIn}
-                className="w-full py-3 px-4 rounded-2xl bg-[#18181e] hover:bg-[#222228] border border-white/10 text-[#FAF3E1] font-bold text-xs transition-all flex items-center justify-center gap-3 cursor-pointer shadow-md active:scale-95"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.29v3.14C3.26 21.3 7.31 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.59H1.29B11.86 9.12 10.5 12 10.5c0 1.25.32 2.43.86 3.48l3.92-3.04z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.59l3.99 3.14c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
             </div>
 
           </div>

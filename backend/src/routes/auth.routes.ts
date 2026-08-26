@@ -17,6 +17,39 @@ router.get('/users', async (req: Request, res: Response) => {
   }
 });
 
+// ✦ CHECK IF USER EXISTS IN DATABASE ✦
+router.post('/check-user', async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ exists: false, error: 'Email required' });
+  }
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findFirst({
+      where: { email: normalizedEmail }
+    });
+
+    if (!user) {
+      return res.json({ exists: false });
+    }
+
+    return res.json({
+      exists: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId,
+        major: user.major,
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ exists: false, error: 'Check failed' });
+  }
+});
+
 // ✦ REGISTER NEW STUDENT (CERTIFIED & VALID EMAILS ONLY) ✦
 router.post('/register', async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
