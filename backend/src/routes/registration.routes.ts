@@ -4,41 +4,34 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Helper to ensure student user exists in database
-async function getOrCreateStudent(userId: string, name?: string, email?: string) {
-  if (!userId) return null;
+// Helper to retrieve student user from database safely
+async function getStudent(userId: string, email?: string) {
+  if (!userId && !email) return null;
 
   try {
-    let user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      // Check if user exists by email if provided
-      if (email) {
-        user = await prisma.user.findUnique({
-          where: { email }
-        });
-      }
-
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            id: userId,
-            name: name || "Aditya Chatterjee",
-            email: email || `${userId.replace(/[^a-zA-Z0-9]/g, "")}@academia.edu`,
-            role: "STUDENT",
-            studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
-            major: "Computer Science & Engineering",
-          }
-        });
-      }
+    if (userId) {
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { id: userId },
+            { email: userId.trim().toLowerCase() }
+          ]
+        }
+      });
+      if (user) return user;
     }
-    return user;
+
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) return user;
+    }
+
+    return null;
   } catch (error) {
-    console.error("Error in getOrCreateStudent:", error);
-    // Fallback to first student if available
-    return await prisma.user.findFirst({ where: { role: "STUDENT" } });
+    console.error("Error in getStudent:", error);
+    return null;
   }
 }
 
@@ -46,7 +39,7 @@ async function getOrCreateStudent(userId: string, name?: string, email?: string)
 router.get('/student/:userId', async (req: Request, res: Response) => {
   const { userId } = req.params;
   try {
-    const user = await getOrCreateStudent(userId);
+    const user = await getStudent(userId);
 
     if (!user) {
       return res.json({

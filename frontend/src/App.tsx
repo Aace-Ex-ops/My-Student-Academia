@@ -69,7 +69,7 @@ export function AppContent() {
   };
 
   const handleCompleteOnboarding = (data: OnboardingData) => {
-    const base = currentUser || users[0] || { id: "student-user", name: "Student", email: "student@academia.edu" };
+    const base = currentUser || { id: `user-${Date.now()}`, name: data.name || "Student", email: data.email || "" };
     const updatedUser: User = {
       ...base,
       ...data,

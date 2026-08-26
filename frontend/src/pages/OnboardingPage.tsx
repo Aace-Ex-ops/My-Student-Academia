@@ -530,7 +530,7 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
     const selectedOption = dynamicAvatarOptions.find((a) => a.id === selectedAvatar);
     const onboardingData = {
       name: displayName.trim() || currentUser?.name || "Student",
-      email: displayEmail.trim() || currentUser?.email || "student@academia.edu",
+      email: (displayEmail.trim() || currentUser?.email || "").toLowerCase(),
       username: username.startsWith("@") ? username : `@${username}`,
       avatar: selectedAvatar,
       avatarIcon: selectedOption?.icon || "👨‍🎓",
