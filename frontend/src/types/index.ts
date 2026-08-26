@@ -20,6 +20,7 @@ export interface User {
   studentId?: string;
   registeredCredits?: number;
   enrolledCourses?: string[];
+  customOnboarding?: any;
 }
 
 export interface Course {

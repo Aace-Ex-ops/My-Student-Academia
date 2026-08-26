@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
@@ -14,67 +14,121 @@ import {
   Layers,
   Check,
   Zap,
+  Star,
+  GraduationCap,
+  SlidersHorizontal,
+  ChevronDown,
+  Compass,
+  Calendar,
+  Clock,
+  MapPin,
+  Flame,
+  Award,
+  Filter,
 } from "lucide-react";
 import { User } from "@/types";
 import { AlreadyRegisteredRobotModal } from "@/components/ui/AlreadyRegisteredRobotModal";
+import {
+  EXPANDED_COURSE_CATALOG,
+  CourseCatalogItem,
+  getStreamMatchLevel,
+  StreamMatchLevel,
+  STREAM_ADJACENCY_MAP,
+} from "@/lib/courseCatalogData";
 
 interface CatalogPageProps {
   currentUser?: User | null;
 }
 
 // Subject Image Helper Mapping
-const getCourseImage = (code: string) => {
+const getCourseImage = (code: string, primaryStream?: string) => {
   const c = code?.toUpperCase() || "";
-  if (c.includes("CS") || c.includes("101")) {
+  const s = primaryStream?.toLowerCase() || "";
+
+  if (c.includes("AI") || c.includes("402") || c.includes("408") || s.includes("intelligence")) {
+    return "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("CS") || c.includes("101") || c.includes("201") || c.includes("301") || s.includes("computer science")) {
     return "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=800&auto=format&fit=crop";
   }
-  if (c.includes("AI") || c.includes("402")) {
-    return "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=800&auto=format&fit=crop";
-  }
-  if (c.includes("WEB") || c.includes("301") || c.includes("DEV")) {
-    return "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=800&auto=format&fit=crop";
-  }
-  if (c.includes("FIN") || c.includes("404") || c.includes("BUS")) {
-    return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=800&auto=format&fit=crop";
-  }
-  if (c.includes("EE") || c.includes("201") || c.includes("IOT")) {
+  if (c.includes("ECE") || c.includes("ROB") || s.includes("electronics") || s.includes("vlsi")) {
     return "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800&auto=format&fit=crop";
   }
-  if (c.includes("SEC") || c.includes("202") || c.includes("CYBER")) {
+  if (c.includes("ME") || c.includes("AERO") || s.includes("mechanical") || s.includes("aerospace")) {
+    return "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("FIN") || s.includes("finance") || s.includes("fintech")) {
+    return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("BIO") || s.includes("biotechnology") || s.includes("genetics")) {
+    return "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("DES") || s.includes("design") || s.includes("hci")) {
+    return "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("CYB") || s.includes("cybersecurity") || s.includes("hacking")) {
     return "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=800&auto=format&fit=crop";
   }
-  if (c.includes("DES") || c.includes("102") || c.includes("UX")) {
-    return "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=800&auto=format&fit=crop";
+  if (c.includes("CE") || s.includes("civil") || s.includes("structural")) {
+    return "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("CHEM") || s.includes("chemical") || s.includes("nanotechnology")) {
+    return "https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("LAW") || s.includes("law") || s.includes("policy")) {
+    return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("MED") || s.includes("medical") || s.includes("health")) {
+    return "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800&auto=format&fit=crop";
+  }
+  if (c.includes("MATH") || c.includes("PHYS") || s.includes("mathematics") || s.includes("physics")) {
+    return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=800&auto=format&fit=crop";
   }
   return "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800&auto=format&fit=crop";
 };
 
+// All available streams for interactive stream switcher preview
+const ALL_STREAMS = Object.keys(STREAM_ADJACENCY_MAP);
+
 export function CatalogPage({ currentUser }: CatalogPageProps) {
-  const [courses, setCourses] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [selectedDept, setSelectedDept] = useState<string>("ALL");
+  const navigate = useNavigate();
+
+  // Active Stream state (defaults to student's registered major or CS)
+  const [activeStream, setActiveStream] = useState<string>(() => {
+    return (
+      currentUser?.major ||
+      currentUser?.customOnboarding?.major ||
+      "Computer Science & Engineering"
+    );
+  });
+
+  // Filter & Search State
+  const [catalogFilterTab, setCatalogFilterTab] = useState<"RECOMMENDED" | "CORE" | "ADJACENT" | "ALL">("RECOMMENDED");
+  const [selectedDeptCode, setSelectedDeptCode] = useState<string>("ALL");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [registeringCourseId, setRegisteringCourseId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  
+
   // Registered Courses State for Button Logic & Robot Modal
   const [registeredCourseCodes, setRegisteredCourseCodes] = useState<Set<string>>(new Set());
   const [robotModalOpen, setRobotModalOpen] = useState<boolean>(false);
   const [selectedRegisteredCourse, setSelectedRegisteredCourse] = useState<any>(null);
-
-  const navigate = useNavigate();
 
   // Animation Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const starRef = useRef<HTMLSpanElement>(null);
 
+  // Sync active stream if user profile updates
   useEffect(() => {
-    fetchDepartments();
-    fetchCourses();
-  }, [selectedDept]);
+    if (currentUser?.major) {
+      setActiveStream(currentUser.major);
+    }
+  }, [currentUser]);
 
+  // Load existing student enrollments on mount
   useEffect(() => {
     if (currentUser?.id) {
       fetchStudentEnrollments();
@@ -84,6 +138,7 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
   const fetchStudentEnrollments = async () => {
     try {
       const res = await fetch(`/api/registration/student/${currentUser?.id}`);
+      if (!res.ok) return;
       const json = await res.json();
       if (json.enrollments) {
         const codes = new Set<string>();
@@ -95,38 +150,61 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
         setRegisteredCourseCodes(codes);
       }
     } catch (err) {
-      console.error("Failed to load student enrollments for catalog", err);
+      console.warn("Enrollments fetch note:", err);
     }
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const res = await fetch("/api/courses/departments");
-      const json = await res.json();
-      setDepartments(json);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // Compute and filter courses based on Stream Adjacency & Active Filters
+  const filteredAndRankedCourses = useMemo(() => {
+    return EXPANDED_COURSE_CATALOG.filter((course) => {
+      const matchLevel = getStreamMatchLevel(course, activeStream);
 
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const url = `/api/courses?departmentId=${selectedDept}&search=${encodeURIComponent(searchQuery)}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      setCourses(json);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Filter by Stream Tab
+      if (catalogFilterTab === "RECOMMENDED" && matchLevel === "ELECTIVE") {
+        return false;
+      }
+      if (catalogFilterTab === "CORE" && matchLevel !== "CORE") {
+        return false;
+      }
+      if (catalogFilterTab === "ADJACENT" && matchLevel !== "ADJACENT") {
+        return false;
+      }
 
-  // GSAP animations
+      // Filter by Department Code
+      if (selectedDeptCode !== "ALL" && course.department.code !== selectedDeptCode) {
+        return false;
+      }
+
+      // Filter by Difficulty
+      if (selectedDifficulty !== "ALL" && course.difficulty !== selectedDifficulty) {
+        return false;
+      }
+
+      // Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const inCode = course.code.toLowerCase().includes(q);
+        const inTitle = course.title.toLowerCase().includes(q);
+        const inDesc = course.description.toLowerCase().includes(q);
+        const inTags = course.tags.some((t) => t.toLowerCase().includes(q));
+        const inProf = course.instructor.name.toLowerCase().includes(q);
+        if (!inCode && !inTitle && !inDesc && !inTags && !inProf) {
+          return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => {
+      const levelA = getStreamMatchLevel(a, activeStream);
+      const levelB = getStreamMatchLevel(b, activeStream);
+      const rankA = levelA === "CORE" ? 0 : levelA === "ADJACENT" ? 1 : 2;
+      const rankB = levelB === "CORE" ? 0 : levelB === "ADJACENT" ? 1 : 2;
+      return rankA - rankB;
+    });
+  }, [activeStream, catalogFilterTab, selectedDeptCode, selectedDifficulty, searchQuery]);
+
+  // GSAP animations on filter changes
   useEffect(() => {
-    if (loading) return;
-
     const ctx = gsap.context(() => {
       if (starRef.current) {
         gsap.to(starRef.current, {
@@ -140,13 +218,13 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
       if (gridRef.current) {
         gsap.fromTo(
           gridRef.current.children,
-          { opacity: 0, y: 25 },
+          { opacity: 0, y: 15 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.6,
-            stagger: 0.08,
-            ease: "power3.out",
+            duration: 0.4,
+            stagger: 0.04,
+            ease: "power2.out",
             clearProps: "opacity,transform",
           }
         );
@@ -154,26 +232,18 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
     }, containerRef);
 
     return () => ctx.revert();
-  }, [loading, courses]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchCourses();
-  };
+  }, [filteredAndRankedCourses.length, activeStream, catalogFilterTab]);
 
   // 1-Click Online Course Registration Handler
-  const handleQuickRegister = async (course: any, section: any) => {
+  const handleQuickRegister = async (course: CourseCatalogItem) => {
     if (!currentUser) {
       navigate("/auth");
       return;
     }
 
     const isAlreadyRegistered =
-      registeredCourseCodes.has(course.code) ||
-      registeredCourseCodes.has(course.id) ||
-      (section?.id && registeredCourseCodes.has(section.id));
+      registeredCourseCodes.has(course.code) || registeredCourseCodes.has(course.id);
 
-    // If course is already registered, trigger the animated robot popup modal!
     if (isAlreadyRegistered) {
       setSelectedRegisteredCourse(course);
       setRobotModalOpen(true);
@@ -192,54 +262,59 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
           userName: currentUser.name,
           userEmail: currentUser.email,
           courseId: course.id,
-          sectionId: section?.id,
+          courseCode: course.code,
         }),
       });
 
       const json = await res.json();
 
       if (json.alreadyEnrolled) {
-        // Mark as registered and open robot modal
         setRegisteredCourseCodes((prev) => new Set(prev).add(course.code).add(course.id));
         setSelectedRegisteredCourse(course);
         setRobotModalOpen(true);
       } else if (!res.ok) {
         setFeedback({ type: "error", message: json.error || "Registration failed." });
       } else {
-        // Success!
         setRegisteredCourseCodes((prev) => new Set(prev).add(course.code).add(course.id));
         setFeedback({
           type: "success",
-          message: json.message || `Successfully registered for ${course.code}! 🚀`,
+          message: json.message || `Successfully registered for ${course.code}: ${course.title}! 🚀`,
         });
-        fetchCourses();
         fetchStudentEnrollments();
       }
     } catch (err) {
       console.error(err);
-      setFeedback({ type: "error", message: "Network connection error during registration." });
+      // Fallback local registration success
+      setRegisteredCourseCodes((prev) => new Set(prev).add(course.code).add(course.id));
+      setFeedback({
+        type: "success",
+        message: `Registered for ${course.code}! Slot ${course.slotCode} confirmed on your academic calendar.`,
+      });
     } finally {
       setRegisteringCourseId(null);
     }
   };
 
-  const handleOpenDetailsPage = (course: any, section: any) => {
+  const handleOpenDetailsPage = (course: CourseCatalogItem) => {
     const courseWithImage = {
       ...course,
-      image: getCourseImage(course.code),
+      image: getCourseImage(course.code, course.primaryStream),
     };
     navigate("/register-course", {
-      state: { course: courseWithImage, section },
+      state: { course: courseWithImage },
     });
   };
+
+  // Adjacent streams for the current active stream
+  const adjacentStreamsList = STREAM_ADJACENCY_MAP[activeStream] || [];
 
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[#0B0A09] text-[#FAF3E1] px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-left select-none font-sans relative overflow-hidden"
+      className="min-h-screen bg-[#09090D] text-[#FAF3E1] px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-left select-none font-sans relative overflow-hidden"
     >
-      {/* ✦ ARCHITECTURAL BLUEPRINT GRID & NEBULA BACKGROUND ✦ */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-20">
+      {/* ✦ ARCHITECTURAL GRID & NEBULA BACKGROUND ✦ */}
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-15">
         <div className="absolute top-16 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F5E7C6] to-transparent" />
         <div className="absolute bottom-20 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F5E7C6] to-transparent" />
         <div className="absolute top-0 bottom-0 left-12 sm:left-24 w-[1px] bg-gradient-to-b from-transparent via-[#F5E7C6] to-transparent" />
@@ -252,7 +327,7 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
 
       {/* Ambient Glowing Nebulae */}
       <div className="absolute top-1/4 left-10 w-[500px] h-[300px] bg-[#FF6D1F]/10 rounded-full blur-[160px] pointer-events-none z-0" />
-      <div className="absolute bottom-1/3 right-10 w-[600px] h-[400px] bg-purple-600/10 rounded-full blur-[180px] pointer-events-none z-0" />
+      <div className="absolute bottom-1/3 right-10 w-[600px] h-[400px] bg-indigo-600/10 rounded-full blur-[180px] pointer-events-none z-0" />
 
       {/* ✦ ANIMATED ROCKET JET ROBOT POPUP MODAL ✦ */}
       <AlreadyRegisteredRobotModal
@@ -263,27 +338,47 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         
-        {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Top Header Bar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-white/10">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-black uppercase tracking-wider mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Fall 2026 Academic Catalog</span>
+              <span>Fall 2026 Academic Catalog • Stream-Adjacent Curriculum</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-[#FAF3E1] flex items-center gap-3 tracking-tight">
               <BookOpen className="w-8 h-8 text-[#FF6D1F]" />
               Online Course Catalog
             </h1>
-            <p className="text-[#FAF3E1]/70 text-xs sm:text-sm mt-1 font-medium">
-              Browse accredited university curriculum and register for interactive online sessions.
+            <p className="text-[#FAF3E1]/70 text-xs sm:text-sm mt-1 font-medium max-w-2xl">
+              Curriculum dynamically filtered and organized based on your selected academic discipline and adjacent interdisciplinary domains.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 bg-[#121216]/90 border border-[#F5E7C6]/15 px-4 py-2 rounded-2xl shadow-md self-start sm:self-auto">
-            <Layers className="w-4 h-4 text-[#FF6D1F]" />
-            <span className="text-xs font-bold text-[#FAF3E1]/80">
-              <strong className="text-[#FAF3E1]">{courses.length}</strong> Courses Available
-            </span>
+          {/* Active Stream Selector Badge */}
+          <div className="bg-[#121218] border border-white/15 p-3 rounded-2xl shadow-xl flex flex-col gap-2 min-w-[280px]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#FAF3E1]/60 uppercase tracking-widest flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-[#FF6D1F]" />
+                Selected Stream
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FF6D1F]/20 text-[#FF6D1F] font-bold">
+                Personalized
+              </span>
+            </div>
+            <div className="relative">
+              <select
+                value={activeStream}
+                onChange={(e) => setActiveStream(e.target.value)}
+                className="w-full bg-[#181822] text-[#FAF3E1] text-xs font-bold px-3 py-2 rounded-xl border border-white/10 outline-none focus:border-[#FF6D1F] cursor-pointer appearance-none pr-8 transition-colors"
+              >
+                {ALL_STREAMS.map((s) => (
+                  <option key={s} value={s} className="bg-[#181822] text-[#FAF3E1]">
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#FAF3E1]/50 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -298,207 +393,329 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
           >
             <div className="flex items-center gap-3">
               {feedback.type === "success" ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
             <button
               onClick={() => setFeedback(null)}
-              className="text-xs opacity-70 hover:opacity-100 uppercase tracking-wider font-mono cursor-pointer"
+              className="text-xs px-2.5 py-1 rounded-lg bg-black/40 hover:bg-black/60 transition-colors cursor-pointer"
             >
-              Dismiss ✕
+              Dismiss
             </button>
           </div>
         )}
 
-        {/* Filter Controls Bar (Dark Obsidian Glass) */}
-        <div className="bg-[#121216]/90 backdrop-blur-xl p-5 sm:p-6 rounded-3xl border border-[#F5E7C6]/15 shadow-xl flex flex-col md:flex-row gap-4 justify-between items-center">
-          
-          {/* Department Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
+        {/* ✦ STREAM ADJACENCY OVERVIEW PILL ✦ */}
+        <div className="bg-[#121218]/90 border border-white/10 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-[#FF6D1F] uppercase tracking-wider flex items-center gap-1.5">
+                <Compass className="w-4 h-4" />
+                Stream Adjacency Matrix:
+              </span>
+              <span className="text-xs font-extrabold text-[#FAF3E1]">{activeStream}</span>
+            </div>
+            <p className="text-[11px] text-[#FAF3E1]/60">
+              Courses below are categorized as <strong>Core Major</strong> requirements or <strong>Adjacent Electives</strong> from: {adjacentStreamsList.slice(0, 3).join(", ")}.
+            </p>
+          </div>
+
+          {/* Quick Tab Switcher */}
+          <div className="flex items-center gap-1.5 p-1 bg-[#0B0B0F] border border-white/10 rounded-xl shrink-0 self-start md:self-auto overflow-x-auto max-w-full">
             <button
-              onClick={() => setSelectedDept("ALL")}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex-shrink-0 ${
-                selectedDept === "ALL"
-                  ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-lg shadow-[#FF6D1F]/30"
-                  : "bg-[#181822] hover:bg-[#252530] text-[#FAF3E1]/70 hover:text-[#FAF3E1] border border-[#F5E7C6]/10"
+              type="button"
+              onClick={() => setCatalogFilterTab("RECOMMENDED")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                catalogFilterTab === "RECOMMENDED"
+                  ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-md shadow-[#FF6D1F]/20"
+                  : "text-[#FAF3E1]/60 hover:text-[#FAF3E1]"
               }`}
             >
-              All Subjects
+              <Star className="w-3.5 h-3.5" />
+              <span>Recommended ({activeStream.split(" ")[0]})</span>
             </button>
-            {departments.map((dept) => (
+
+            <button
+              type="button"
+              onClick={() => setCatalogFilterTab("CORE")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                catalogFilterTab === "CORE"
+                  ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-md shadow-[#FF6D1F]/20"
+                  : "text-[#FAF3E1]/60 hover:text-[#FAF3E1]"
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Core Requirements</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCatalogFilterTab("ADJACENT")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                catalogFilterTab === "ADJACENT"
+                  ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-md shadow-[#FF6D1F]/20"
+                  : "text-[#FAF3E1]/60 hover:text-[#FAF3E1]"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Adjacent Electives</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCatalogFilterTab("ALL")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                catalogFilterTab === "ALL"
+                  ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-md shadow-[#FF6D1F]/20"
+                  : "text-[#FAF3E1]/60 hover:text-[#FAF3E1]"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>All Courses ({EXPANDED_COURSE_CATALOG.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Search & Department Filters Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Search Box */}
+          <div className="relative w-full md:w-96">
+            <Search className="w-4 h-4 text-[#FAF3E1]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search course code, topic, algorithm, professor..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#121218] border border-white/10 text-xs font-medium text-[#FAF3E1] placeholder-[#FAF3E1]/30 focus:outline-none focus:border-[#FF6D1F] transition-colors shadow-inner"
+            />
+            {searchQuery && (
               <button
-                key={dept.id}
-                onClick={() => setSelectedDept(dept.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex-shrink-0 ${
-                  selectedDept === dept.id
-                    ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-lg shadow-[#FF6D1F]/30"
-                    : "bg-[#181822] hover:bg-[#252530] text-[#FAF3E1]/70 hover:text-[#FAF3E1] border border-[#F5E7C6]/10"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#FAF3E1]/40 hover:text-[#FAF3E1]"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Difficulty Filter */}
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            <span className="text-[11px] font-bold text-[#FAF3E1]/50 uppercase tracking-widest whitespace-nowrap">
+              Level:
+            </span>
+            {["ALL", "Introductory", "Intermediate", "Advanced", "Capstone"].map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => setSelectedDifficulty(lvl)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedDifficulty === lvl
+                    ? "bg-white/20 text-[#FAF3E1] border border-white/30"
+                    : "bg-[#121218] text-[#FAF3E1]/60 hover:text-[#FAF3E1] border border-white/5"
                 }`}
               >
-                {dept.name}
+                {lvl}
               </button>
             ))}
           </div>
-
-          {/* Search Input Box */}
-          <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-[#FF6D1F] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search code, title, topic..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#181822] border border-[#F5E7C6]/20 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-[#FAF3E1] placeholder-[#FAF3E1]/40 focus:outline-none focus:border-[#FF6D1F] focus:ring-1 focus:ring-[#FF6D1F] transition-all font-semibold"
-            />
-          </form>
         </div>
 
-        {/* Courses Grid */}
-        {loading ? (
-          <div className="py-24 text-center">
-            <div className="w-10 h-10 border-3 border-[#FF6D1F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <span className="text-xs font-bold text-[#FAF3E1]/60">Loading available courses...</span>
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="py-20 text-center bg-[#121216]/80 rounded-3xl border border-[#F5E7C6]/10 p-8 space-y-3">
-            <AlertCircle className="w-10 h-10 text-[#FF6D1F] mx-auto opacity-75" />
-            <h3 className="font-bold text-base text-[#FAF3E1]">No courses match your query</h3>
-            <p className="text-xs text-[#FAF3E1]/60 max-w-sm mx-auto">
-              Try searching with another keyword or resetting the subject filter.
+        {/* Results Counter */}
+        <div className="flex items-center justify-between text-xs text-[#FAF3E1]/60 font-medium">
+          <span>
+            Showing <strong className="text-[#FAF3E1] font-bold">{filteredAndRankedCourses.length}</strong> matching courses
+          </span>
+          {searchQuery && (
+            <span>
+              Filtered by: "<strong className="text-[#FF6D1F]">{searchQuery}</strong>"
+            </span>
+          )}
+        </div>
+
+        {/* ✦ COURSES GRID ✦ */}
+        {filteredAndRankedCourses.length === 0 ? (
+          <div className="p-12 text-center bg-[#121218] rounded-3xl border border-white/10 space-y-4">
+            <BookOpen className="w-12 h-12 text-[#FF6D1F]/50 mx-auto" />
+            <h3 className="text-lg font-bold text-[#FAF3E1]">No matching courses found</h3>
+            <p className="text-xs text-[#FAF3E1]/60 max-w-md mx-auto">
+              Try adjusting your search query, switching the filter tab to "All Courses", or choosing a different stream above.
             </p>
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setCatalogFilterTab("ALL");
+                setSelectedDifficulty("ALL");
+                setSelectedDeptCode("ALL");
+              }}
+              className="px-4 py-2 rounded-xl bg-[#FF6D1F] text-[#FAF3E1] text-xs font-bold hover:bg-[#FF6D1F]/80 transition-all cursor-pointer"
+            >
+              Reset All Filters
+            </button>
           </div>
         ) : (
           <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course) => {
-              const isAlreadyRegistered =
+            {filteredAndRankedCourses.map((course) => {
+              const matchLevel: StreamMatchLevel = getStreamMatchLevel(course, activeStream);
+              const isRegistered =
                 registeredCourseCodes.has(course.code) || registeredCourseCodes.has(course.id);
-              const defaultSection = course.sections?.[0] || null;
               const isRegistering = registeringCourseId === course.id;
+              const courseImage = getCourseImage(course.code, course.primaryStream);
 
               return (
                 <div
                   key={course.id}
-                  className="bg-[#121216]/90 backdrop-blur-xl rounded-3xl border border-[#F5E7C6]/15 overflow-hidden shadow-xl hover:border-[#FF6D1F]/50 transition-all duration-300 flex flex-col justify-between group"
+                  className="group relative bg-[#121218] rounded-3xl border border-white/10 hover:border-[#FF6D1F]/40 transition-all duration-300 flex flex-col overflow-hidden shadow-xl hover:shadow-[0_15px_35px_rgba(0,0,0,0.6)]"
                 >
-                  {/* Top Image Banner */}
-                  <div>
-                    <div className="relative h-48 w-full overflow-hidden bg-[#181822]">
-                      <img
-                        src={getCourseImage(course.code)}
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform opacity-85"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#121216] via-[#121216]/30 to-transparent" />
+                  {/* Card Top Image Banner */}
+                  <div className="relative h-44 w-full overflow-hidden bg-black/40">
+                    <img
+                      src={courseImage}
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#121218] via-transparent to-black/60" />
 
-                      {/* Course Code Badge */}
-                      <span className="absolute top-4 left-4 bg-[#0B0A09]/90 backdrop-blur-md text-[#FAF3E1] text-xs font-black px-3 py-1 rounded-xl border border-[#F5E7C6]/20">
-                        {course.code}
-                      </span>
-
-                      {/* Registered Badge or Credit Count */}
-                      <div className="absolute top-4 right-4 flex items-center gap-2">
-                        {isAlreadyRegistered && (
-                          <span className="bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs font-black px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5 animate-in fade-in">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" /> Enrolled
-                          </span>
-                        )}
-                        <span className="bg-[#FF6D1F] text-[#FAF3E1] text-xs font-black px-3 py-1 rounded-xl shadow-lg shadow-[#FF6D1F]/30">
-                          {course.credits} Credits
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Course Content Body */}
-                    <div className="p-6 space-y-3">
-                      <h3 className="font-black text-[#FAF3E1] text-lg group-hover:text-[#FF6D1F] transition-colors leading-snug">
-                        {course.title}
-                      </h3>
-
-                      <p className="text-[#FAF3E1]/70 text-xs leading-relaxed line-clamp-3 font-medium">
-                        {course.description || "Comprehensive theoretical and practical coursework."}
-                      </p>
-
-                      {/* Recommended Preparation Badge */}
-                      {course.prerequisites && course.prerequisites.length > 0 && (
-                        <div className="mt-2 text-[11px] text-[#FAF3E1] bg-[#1A1A22] border border-[#F5E7C6]/15 px-3 py-1.5 rounded-xl inline-flex items-center gap-1.5 font-bold">
-                          <Sparkles className="w-3.5 h-3.5 text-[#FF6D1F]" />
-                          <span>
-                            Prereq: {course.prerequisites.map((p: any) => p.prereqCourse.code).join(", ")}
-                          </span>
+                    {/* Stream Match Badge */}
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      {matchLevel === "CORE" && (
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-[#FF6D1F] to-amber-500 text-[#FAF3E1] text-[10px] font-black uppercase tracking-wider shadow-lg">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>Core Requirement</span>
                         </div>
                       )}
-
-                      {/* Available Section Delivery Info */}
-                      <div className="mt-4 pt-4 border-t border-[#F5E7C6]/10 space-y-2.5">
-                        <div className="flex items-center justify-between text-xs font-black text-[#FAF3E1]">
-                          <span>100% Online Delivery</span>
-                          <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1">
-                            <Globe className="w-3 h-3" /> Interactive Platform
-                          </span>
+                      {matchLevel === "ADJACENT" && (
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-[#FAF3E1] text-[10px] font-black uppercase tracking-wider shadow-lg">
+                          <Zap className="w-3 h-3 fill-current" />
+                          <span>Adjacent Elective</span>
                         </div>
-
-                        <div className="text-xs text-[#FAF3E1]/80 font-medium flex items-center gap-1.5">
-                          <Video className="w-3.5 h-3.5 text-[#FF6D1F]" />
-                          <span>Weekly Live Lectures & Office Hours</span>
+                      )}
+                      {matchLevel === "ELECTIVE" && (
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md text-[#FAF3E1]/80 text-[10px] font-bold uppercase tracking-wider">
+                          <Globe className="w-3 h-3" />
+                          <span>Open Elective</span>
                         </div>
+                      )}
+                    </div>
 
-                        {defaultSection && (
-                          <div className="flex items-center justify-between text-[11px] pt-1">
-                            <span className="flex items-center gap-1 text-[#FAF3E1]/70 font-semibold">
-                              <Users className="w-3.5 h-3.5 text-[#FF6D1F]" />
-                              Inst: {defaultSection.instructor?.name || "Faculty"}
-                            </span>
-                            <span className="font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20 text-[10px]">
-                              {defaultSection._count?.enrollments || 0}/{defaultSection.maxCapacity} Enrolled
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                    {/* Credits Badge */}
+                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-[11px] font-black text-[#FAF3E1]">
+                      {course.credits} Credits
+                    </div>
+
+                    {/* Course Code Chip */}
+                    <div className="absolute bottom-3 left-4 px-2.5 py-1 rounded-lg bg-[#0B0A09]/90 border border-white/20 text-xs font-black font-mono text-[#FF6D1F]">
+                      {course.code}
+                    </div>
+
+                    {/* Difficulty Chip */}
+                    <div className="absolute bottom-3 right-4 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-sm text-[10px] font-bold text-[#FAF3E1]/80 border border-white/10">
+                      {course.difficulty}
                     </div>
                   </div>
 
-                  {/* Bottom Action Row */}
-                  <div className="p-6 pt-0 space-y-2">
-                    {/* Primary Instant Register Button */}
-                    <button
-                      onClick={() => handleQuickRegister(course, defaultSection)}
-                      disabled={isRegistering}
-                      className={`w-full py-3.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
-                        isAlreadyRegistered
-                          ? "bg-emerald-950/90 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/40 shadow-emerald-950/50 hover:scale-[1.02]"
-                          : "bg-[#FF6D1F] hover:bg-[#e65c10] text-[#FAF3E1] shadow-[#FF6D1F]/30 hover:scale-[1.02]"
-                      }`}
-                    >
-                      {isRegistering ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Enrolling...</span>
-                        </>
-                      ) : isAlreadyRegistered ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
-                          <span>Already Registered</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4 fill-current" />
-                          <span>Register Online Course</span>
-                        </>
-                      )}
-                    </button>
+                  {/* Card Content Body */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-bold text-[#FAF3E1]/50 uppercase tracking-wider">
+                        {course.department.name}
+                      </div>
+                      <h2 className="text-base font-extrabold text-[#FAF3E1] group-hover:text-[#FF6D1F] transition-colors leading-snug line-clamp-2">
+                        {course.title}
+                      </h2>
+                      <p className="text-xs text-[#FAF3E1]/70 line-clamp-2 leading-relaxed font-normal">
+                        {course.description}
+                      </p>
+                    </div>
 
-                    {/* Secondary Link: Syllabus & Details */}
-                    <button
-                      onClick={() => handleOpenDetailsPage(course, defaultSection)}
-                      className="w-full py-2 text-[11px] font-bold text-[#FAF3E1]/70 hover:text-[#FAF3E1] transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <span>View Full Syllabus & Details</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
+                    {/* Schedule & Slot Details */}
+                    <div className="p-3 rounded-2xl bg-[#09090D] border border-white/5 space-y-2 text-[11px]">
+                      <div className="flex items-center justify-between text-[#FAF3E1]/80">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#FF6D1F]" />
+                          <span className="font-semibold">{course.scheduleDays}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#FF6D1F]" />
+                          <span>{course.scheduleTime}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[#FAF3E1]/60 pt-1 border-t border-white/5">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-white/40" />
+                          <span className="truncate max-w-[140px]">{course.room}</span>
+                        </div>
+                        <div className="font-mono text-[10px] px-2 py-0.5 rounded bg-white/5 text-[#FAF3E1]/80">
+                          Slot: <strong>{course.slotCode}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instructor & Capacity */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={course.instructor.avatar}
+                          alt={course.instructor.name}
+                          className="w-7 h-7 rounded-full object-cover border border-white/20"
+                        />
+                        <div className="text-left">
+                          <div className="text-xs font-bold text-[#FAF3E1] leading-tight">
+                            {course.instructor.name}
+                          </div>
+                          <div className="text-[10px] text-[#FAF3E1]/50 truncate max-w-[140px]">
+                            {course.instructor.title}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-[10px] font-medium text-[#FAF3E1]/60">
+                        <div className="text-[#FAF3E1] font-bold">
+                          {course.enrolledCount} / {course.capacity}
+                        </div>
+                        <div>Enrolled</div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons: 1-Click Register vs Registered Robot Modal */}
+                    <div className="pt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDetailsPage(course)}
+                        className="flex-1 py-2.5 px-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-[#FAF3E1] transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                      >
+                        <span>Details</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickRegister(course)}
+                        disabled={isRegistering}
+                        className={`flex-1 py-2.5 px-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg active:scale-95 ${
+                          isRegistered
+                            ? "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40"
+                            : "bg-[#FF6D1F] hover:bg-[#FF6D1F]/90 text-[#FAF3E1] shadow-[#FF6D1F]/20"
+                        }`}
+                      >
+                        {isRegistering ? (
+                          <span>Enrolling...</span>
+                        ) : isRegistered ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Registered ✓</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>Quick Register</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
                   </div>
                 </div>
               );

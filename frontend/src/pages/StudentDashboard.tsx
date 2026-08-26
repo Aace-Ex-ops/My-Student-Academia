@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { AvatarDisplay } from "@/components/ui/profile-dropdown";
 import { User } from "@/types";
+import { getRecommendedCourses, CourseCatalogItem } from "@/lib/courseCatalogData";
 
 interface StudentDashboardProps {
   currentUser?: User | null;
@@ -534,6 +535,71 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
             </Link>
           </div>
         )}
+
+        {/* ✦ STREAM-ADJACENT RECOMMENDED COURSES ✦ */}
+        {(() => {
+          const studentStream = currentUser?.major || currentUser?.customOnboarding?.major || "Computer Science & Engineering";
+          const recommended = getRecommendedCourses(studentStream).slice(0, 3);
+          return (
+            <div className="bg-[#121218] border border-white/10 p-6 rounded-3xl space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#FF6D1F]" />
+                    <h3 className="font-black text-[#FAF3E1] text-base">
+                      Curriculum Recommended for Your Stream
+                    </h3>
+                  </div>
+                  <p className="text-xs text-[#FAF3E1]/60 mt-0.5">
+                    Tailored core and interdisciplinary adjacent electives for <strong>{studentStream}</strong>.
+                  </p>
+                </div>
+
+                <Link
+                  to="/catalog"
+                  className="text-xs font-black text-[#FF6D1F] hover:text-amber-400 flex items-center gap-1 self-start sm:self-auto group"
+                >
+                  <span>View All Stream Electives</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {recommended.map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/catalog"
+                    className="p-4 rounded-2xl bg-[#181822] hover:bg-[#1E1E2C] border border-white/10 hover:border-[#FF6D1F]/50 transition-all flex flex-col justify-between group space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-[#FF6D1F]/20 text-[#FF6D1F]">
+                          {c.code}
+                        </span>
+                        <span className="text-[10px] font-bold text-[#FAF3E1]/60 px-2 py-0.5 rounded bg-white/5">
+                          {c.credits} Credits
+                        </span>
+                      </div>
+                      <h4 className="font-black text-xs text-[#FAF3E1] group-hover:text-[#FF6D1F] transition-colors line-clamp-1">
+                        {c.title}
+                      </h4>
+                      <p className="text-[11px] text-[#FAF3E1]/60 line-clamp-2 mt-1">
+                        {c.description}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-[#FAF3E1]/60">
+                      <span>Prof. {c.instructor.name.split(" ").slice(-1)[0]}</span>
+                      <span className="font-bold text-[#FF6D1F] flex items-center gap-1 group-hover:underline">
+                        Explore <ArrowUpRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 4. MAIN WORKSPACE SPLIT (Enrolled Courses vs. Waitlists & Tools) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
