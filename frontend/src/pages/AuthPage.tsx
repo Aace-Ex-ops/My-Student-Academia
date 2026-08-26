@@ -80,11 +80,14 @@ function saveRegisteredAccount(user: User) {
 export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [googleAvatarUrl, setGoogleAvatarUrl] = useState<string | null>(null);
 
   // Feedback States
   const [notification, setNotification] = useState<string | null>(null);
@@ -263,46 +266,69 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       return;
     }
 
-    try {
-      await apiFetch("/api/auth/google", {
-        method: "POST",
-        body: JSON.stringify({
-          name: nameToUse,
-          email: emailToUse,
-          avatarUrl: photoToUse,
-          googleId: userData.googleId,
-        }),
-      }).catch(() => {});
-    } catch (e) {}
-
-    const newUser: User = {
-      id: `google-user-${Date.now()}`,
-      name: nameToUse,
-      email: emailToUse,
-      username: `@${nameToUse.toLowerCase().replace(/\s+/g, "_")}`,
-      role: "STUDENT",
-      studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
-      university: "Indian Institute of Technology (IIT) Kharagpur",
-      major: "Computer Science & Engineering",
-      phone: "+91 9876543210",
-      googlePhotoUrl: photoToUse,
-      avatarUrl: photoToUse,
-      avatar: "google_photo",
-      avatarIcon: "🌐",
-      avatarBg: "from-blue-600 to-indigo-600",
-    };
-
-    saveRegisteredAccount(newUser);
-
-    if (onLoginUser) {
-      onLoginUser(newUser);
+    // 1. Check if this account is ALREADY registered in local registry or backend DB
+    let existingUser: User | null = null;
+    const registry = getRegisteredAccounts();
+    if (registry[emailToUse]) {
+      existingUser = registry[emailToUse];
     }
-    localStorage.setItem("msa_custom_user_profile", JSON.stringify(newUser));
-    setNotification(`Google Sign-In verified: Welcome, ${nameToUse}!`);
 
-    setTimeout(() => {
-      navigate("/onboarding");
-    }, 800);
+    if (!existingUser) {
+      try {
+        const res = await apiFetch("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: emailToUse,
+            password: "oauth-user-check-probe",
+          }),
+        });
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (res.ok && data.user) {
+            existingUser = data.user;
+          }
+        }
+      } catch (err) {
+        console.warn("Backend Google check note:", err);
+      }
+    }
+
+    if (existingUser) {
+      // ✦ EXISTING USER: Log in directly and go straight to /dashboard! ✦
+      const loggedInUser: User = {
+        ...existingUser,
+        googlePhotoUrl: photoToUse || existingUser.googlePhotoUrl,
+        avatarUrl: photoToUse || existingUser.avatarUrl,
+      };
+
+      saveRegisteredAccount(loggedInUser);
+
+      if (onLoginUser) {
+        onLoginUser(loggedInUser);
+      }
+      localStorage.setItem("msa_custom_user_profile", JSON.stringify(loggedInUser));
+      setNotification(`Welcome back, ${loggedInUser.name}! Logging into dashboard...`);
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 600);
+
+    } else {
+      // ✦ FIRST-TIME USER: DO NOT log in directly! ✦
+      // Switch to 'Create Account' tab, pre-fill Name & Email, and prompt user to set & confirm password!
+      setIsSignUp(true);
+      setFullName(nameToUse);
+      setEmail(emailToUse);
+      setGoogleAvatarUrl(photoToUse);
+      setPassword("");
+      setConfirmPassword("");
+      setErrorMessage(null);
+      setShowCreatePromptForEmail(null);
+      setNotification(
+        `Google Account verified (${emailToUse})! Please set and confirm your custom password to complete registration.`
+      );
+    }
   };
 
   // Direct Interactive Google Sign In Trigger
@@ -348,6 +374,19 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     setIsLoading(true);
 
     if (isSignUp) {
+      // Validate Password
+      if (password.length < 6) {
+        setIsLoading(false);
+        setErrorMessage("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setIsLoading(false);
+        setErrorMessage("Passwords do not match. Please ensure both password fields are identical.");
+        return;
+      }
+
       const registry = getRegisteredAccounts();
       if (registry[emailToUse]) {
         setIsLoading(false);
@@ -362,7 +401,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
           body: JSON.stringify({
             name: nameToUse,
             email: emailToUse,
-            password: password || "password123",
+            password: password,
           }),
         });
 
@@ -391,8 +430,10 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         university: "Indian Institute of Technology (IIT) Kharagpur",
         major: "Computer Science & Engineering",
         phone: "+91 9876543210",
-        avatar: "scholar",
-        avatarIcon: "👨‍🎓",
+        avatar: googleAvatarUrl ? "google_photo" : "scholar",
+        avatarIcon: googleAvatarUrl ? "🌐" : "👨‍🎓",
+        avatarUrl: googleAvatarUrl || undefined,
+        googlePhotoUrl: googleAvatarUrl || undefined,
         avatarBg: "from-amber-500 to-orange-600",
       };
 
@@ -404,7 +445,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       localStorage.setItem("msa_custom_user_profile", JSON.stringify(newUser));
 
       setIsLoading(false);
-      setNotification(`Account Created for ${nameToUse}! Redirecting...`);
+      setNotification(`Account Created for ${nameToUse}! Redirecting to student onboarding...`);
 
       setTimeout(() => {
         navigate("/onboarding");
@@ -444,7 +485,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         setIsLoading(false);
         setShowCreatePromptForEmail(emailToUse);
         setErrorMessage(
-          `No account found with ${emailToUse}. Only created accounts can log in.`
+          `No account found with ${emailToUse}. Only created accounts can log in. Please click 'Create Account' first.`
         );
         return;
       }
@@ -472,11 +513,11 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       localStorage.setItem("msa_custom_user_profile", JSON.stringify(loggedInUser));
 
       setIsLoading(false);
-      setNotification(`Welcome back, ${loggedInUser.name}! Logging in...`);
+      setNotification(`Welcome back, ${loggedInUser.name}! Logging into dashboard...`);
 
       setTimeout(() => {
-        navigate("/onboarding");
-      }, 800);
+        navigate("/dashboard");
+      }, 600);
     }
   };
 
@@ -719,6 +760,67 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
                   </div>
                 )}
               </div>
+
+              {/* Confirm Password (Sign Up Mode Only) */}
+              <AnimatePresence mode="wait">
+                {isSignUp && (
+                  <motion.div
+                    key="confirm-password-field"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-[#FAF3E1]/80">
+                        Confirm Password
+                      </label>
+                      {confirmPassword && (
+                        password === confirmPassword ? (
+                          <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            <span>Passwords Match</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono font-bold text-rose-400 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Passwords Don't Match</span>
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-white/30 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        placeholder="Re-enter your password"
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value);
+                          setErrorMessage(null);
+                        }}
+                        className={`w-full bg-[#18181e] border rounded-2xl pl-10 pr-11 py-2.5 text-xs text-[#FAF3E1] placeholder-[#FAF3E1]/35 focus:outline-none transition-all font-medium ${
+                          confirmPassword && password !== confirmPassword
+                            ? "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/30"
+                            : confirmPassword && password === confirmPassword
+                            ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                            : "border-white/10 focus:border-[#FF6D1F] focus:ring-2 focus:ring-[#FF6D1F]/30"
+                        }`}
+                        required={isSignUp}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#FAF3E1]/40 hover:text-[#FAF3E1] transition-colors p-1 cursor-pointer"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Submit Button */}
               <button

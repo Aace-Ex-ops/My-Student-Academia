@@ -13,10 +13,20 @@ import { InstructorPage } from './pages/InstructorPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 
+const MSA_SESSION_VERSION = "v2026_08_26_clean";
+
 export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
+      const version = localStorage.getItem('msa_session_version');
+      if (version !== MSA_SESSION_VERSION) {
+        localStorage.removeItem('msa_custom_user_profile');
+        localStorage.removeItem('msa_registered_accounts_registry');
+        localStorage.removeItem('msa_custom_onboarding');
+        localStorage.setItem('msa_session_version', MSA_SESSION_VERSION);
+        return null;
+      }
       const saved = localStorage.getItem('msa_custom_user_profile');
       if (saved) return JSON.parse(saved);
     } catch (e) {
@@ -34,25 +44,12 @@ export function AppContent() {
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/auth/users');
-      const json = await res.json();
-      setUsers(json);
-
-      // Check if custom persisted onboarding profile exists in localStorage
-      const savedCustomProfile = localStorage.getItem('msa_custom_user_profile');
-      if (savedCustomProfile) {
-        try {
-          const parsed = JSON.parse(savedCustomProfile);
-          setCurrentUser(parsed);
-          return;
-        } catch (e) {
-          console.error('Error parsing stored user profile', e);
-        }
+      if (res.ok) {
+        const json = await res.json();
+        setUsers(json);
       }
-
-      // Only use explicitly logged in user from localStorage
-
     } catch (err) {
-      console.error('Failed to load users', err);
+      console.warn('Users fetch notice:', err);
     }
   };
 
@@ -95,6 +92,13 @@ export function AppContent() {
     };
     setCurrentUser(updatedUser);
     localStorage.setItem('msa_custom_user_profile', JSON.stringify(updatedUser));
+
+    try {
+      const rawReg = localStorage.getItem('msa_registered_accounts_registry');
+      const reg = rawReg ? JSON.parse(rawReg) : {};
+      reg[updatedUser.email.toLowerCase()] = updatedUser;
+      localStorage.setItem('msa_registered_accounts_registry', JSON.stringify(reg));
+    } catch (e) {}
   };
 
   const showLayoutHeaders = location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/onboarding';
