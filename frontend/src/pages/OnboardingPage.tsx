@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Upload,
   Camera,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { User as UserType, OnboardingData } from "@/types";
@@ -393,6 +394,8 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
   // Payment Details (Step 4 for paid plans)
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [upiId, setUpiId] = useState("");
+  const [upiUtr, setUpiUtr] = useState("");
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
@@ -1130,7 +1133,9 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl sm:text-3xl font-black text-[#FAF3E1]">Banking & Payment Details</h2>
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#FAF3E1]">
+                    {paymentMethod === "upi" ? "Scan UPI QR & Complete Payment" : "Banking & Payment Details"}
+                  </h2>
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1">
                     <Lock className="w-3 h-3" /> 256-Bit Encrypted
                   </span>
@@ -1141,7 +1146,8 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
                     {selectedPlan === "monthly"
                       ? "Pro Student Monthly (₹499/mo)"
                       : "Pro Student Annual (₹2,999/yr)"}
-                  </span>.
+                  </span>{" "}
+                  to activate all advanced modules and live instructor priority.
                 </p>
               </div>
 
@@ -1151,13 +1157,14 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
                   type="button"
                   onClick={() => setPaymentMethod("upi")}
                   className={cn(
-                    "flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer",
+                    "flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5",
                     paymentMethod === "upi"
-                      ? "bg-[#FF6D1F] text-[#FAF3E1] border-[#FF6D1F]"
-                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15"
+                      ? "bg-[#FF6D1F] text-[#FAF3E1] border-[#FF6D1F] shadow-lg shadow-[#FF6D1F]/20"
+                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15 hover:text-[#FAF3E1]"
                   )}
                 >
-                  BHIM UPI / GPay
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>BHIM UPI / GPay (QR Code)</span>
                 </button>
                 <button
                   type="button"
@@ -1166,7 +1173,7 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
                     "flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer",
                     paymentMethod === "card"
                       ? "bg-[#FF6D1F] text-[#FAF3E1] border-[#FF6D1F]"
-                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15"
+                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15 hover:text-[#FAF3E1]"
                   )}
                 >
                   Credit / Debit Card
@@ -1178,29 +1185,122 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
                     "flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer",
                     paymentMethod === "netbanking"
                       ? "bg-[#FF6D1F] text-[#FAF3E1] border-[#FF6D1F]"
-                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15"
+                      : "bg-[#1c1c22] text-[#FAF3E1]/70 border-[#F5E7C6]/15 hover:text-[#FAF3E1]"
                   )}
                 >
                   NetBanking
                 </button>
               </div>
 
-              {/* UPI Input */}
+              {/* ✦ DEDICATED BHIM UPI / GPAY QR CODE SECTION ✦ */}
               {paymentMethod === "upi" && (
-                <div className="p-4 rounded-2xl bg-[#1c1c22] border border-[#F5E7C6]/20 space-y-3">
-                  <label className="block text-xs font-black text-[#FAF3E1]">
-                    Enter Virtual Payment Address (VPA / UPI ID)
-                  </label>
-                  <input
-                    type="text"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="username@okaxis / username@paytm"
-                    className="w-full bg-[#141418] border border-[#F5E7C6]/20 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF3E1] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF6D1F]"
-                  />
-                  <p className="text-[11px] text-[#FAF3E1]/60 font-semibold">
-                    Instant UPI payment request will be sent to your UPI App.
-                  </p>
+                <div className="p-5 sm:p-6 rounded-3xl bg-[#14141C] border border-[#FF6D1F]/30 shadow-2xl space-y-6">
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    
+                    {/* QR Code Presentation Frame */}
+                    <div className="flex flex-col items-center gap-2.5 bg-white p-3 rounded-2xl shadow-[0_0_35px_rgba(255,109,31,0.25)] border-2 border-[#FF6D1F] shrink-0">
+                      <img
+                        src={selectedPlan === "monthly" ? "/499.jpeg" : "/2999.jpeg"}
+                        alt={selectedPlan === "monthly" ? "Scan to pay ₹499" : "Scan to pay ₹2,999"}
+                        className="w-48 h-48 sm:w-52 sm:h-52 object-contain rounded-xl"
+                      />
+                      <div className="text-[11px] font-black uppercase tracking-wider text-black bg-orange-100 px-3 py-1 rounded-full border border-orange-300">
+                        {selectedPlan === "monthly" ? "₹499 (Monthly Pro)" : "₹2,999 (Annual Pro - Save 50%)"}
+                      </div>
+                    </div>
+
+                    {/* Scan & Pay Instructions */}
+                    <div className="flex-1 space-y-3.5 text-left">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wider">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Instant Verification Active</span>
+                      </div>
+
+                      <h3 className="text-base sm:text-lg font-black text-[#FAF3E1]">
+                        Scan with Google Pay, PhonePe, Paytm, or BHIM
+                      </h3>
+
+                      <p className="text-xs text-[#FAF3E1]/70 leading-relaxed font-medium">
+                        Open your UPI app and scan the QR code to transfer exactly{" "}
+                        <strong className="text-emerald-400 font-extrabold text-sm">
+                          {selectedPlan === "monthly" ? "₹499" : "₹2,999"}
+                        </strong>{" "}
+                        for your {selectedPlan === "monthly" ? "Monthly Pro" : "Annual Pro"} academic subscription.
+                      </p>
+
+                      {/* Copyable UPI ID Box */}
+                      <div className="p-3 rounded-xl bg-[#0B0A0F] border border-white/10 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-bold text-[#FAF3E1]/50 uppercase tracking-widest">
+                            Direct UPI ID / VPA
+                          </div>
+                          <div className="font-mono text-xs font-black text-[#FAF3E1]">
+                            achatt4u@okhdfcbank
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText("achatt4u@okhdfcbank");
+                            setCopiedUpi(true);
+                            setTimeout(() => setCopiedUpi(false), 2000);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#FF6D1F]/20 hover:bg-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border border-[#FF6D1F]/30 active:scale-95 shrink-0"
+                        >
+                          {copiedUpi ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy ID</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Optional Transaction UTR Input */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-[#FAF3E1]/70 uppercase tracking-wider">
+                          UPI 12-Digit Reference / UTR No. (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={upiUtr}
+                          onChange={(e) => setUpiUtr(e.target.value)}
+                          placeholder="e.g. 423589124012"
+                          maxLength={16}
+                          className="w-full bg-[#0B0A0F] border border-white/15 rounded-xl px-3.5 py-2 text-xs text-[#FAF3E1] font-mono focus:outline-none focus:ring-2 focus:ring-[#FF6D1F]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Verification Actions */}
+                  <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setStep(5)}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-[#FAF3E1] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 transition-all cursor-pointer active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-[#FAF3E1]" />
+                      <span>✓ I Have Paid {selectedPlan === "monthly" ? "₹499" : "₹2,999"} (Proceed to Workspace)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlan("free");
+                        setStep(5);
+                      }}
+                      className="text-xs text-[#FAF3E1]/60 hover:text-[#FAF3E1] underline cursor-pointer py-1.5 transition-colors"
+                    >
+                      Or continue with Free Plan (₹0)
+                    </button>
+                  </div>
                 </div>
               )}
 
