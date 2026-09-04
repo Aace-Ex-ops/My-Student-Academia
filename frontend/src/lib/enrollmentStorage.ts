@@ -95,12 +95,29 @@ export function saveLocalEnrollment(userIdOrEmail: string, course: any): StoredE
     const raw = localStorage.getItem(ENROLLMENTS_KEY);
     let registry = raw ? JSON.parse(raw) : {};
     
-    // Fix: If legacy data was an array, JSON.stringify will ignore string properties.
+    // Fix: If legacy data was an array, reset it.
     if (Array.isArray(registry)) {
       registry = {}; 
     }
     
     registry[userKey] = [...(registry[userKey] || []), newEnrollment];
+
+    // Also attempt to get profile to save under alternate key (e.g. email if userKey was id, or vice versa)
+    try {
+      const profileRaw = localStorage.getItem("msa_custom_user_profile");
+      if (profileRaw) {
+        const profile = JSON.parse(profileRaw);
+        if (profile.id && profile.id.toLowerCase() !== userKey) {
+          const altKey = profile.id.toLowerCase();
+          registry[altKey] = [...(registry[altKey] || []), newEnrollment];
+        }
+        if (profile.email && profile.email.toLowerCase() !== userKey) {
+          const altKey = profile.email.toLowerCase();
+          registry[altKey] = [...(registry[altKey] || []), newEnrollment];
+        }
+      }
+    } catch (e) {}
+
     localStorage.setItem(ENROLLMENTS_KEY, JSON.stringify(registry));
   } catch (e) {
     console.warn("Failed to save local enrollment:", e);

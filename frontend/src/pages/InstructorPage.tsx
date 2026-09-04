@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { UserCheck, BookOpen, Users, Clock, Globe, Sparkles, Video, Mail, Calendar } from "lucide-react";
 import { User } from "@/types";
 import { getLocalEnrollments } from "@/lib/enrollmentStorage";
+import { EXPANDED_COURSE_CATALOG } from "@/lib/courseCatalogData";
 
 interface InstructorPageProps {
   currentUser?: User | null;
 }
 
 export function InstructorPage({ currentUser }: InstructorPageProps) {
+  const navigate = useNavigate();
   const [sections, setSections] = useState<any[]>([]);
   const [studentFaculty, setStudentFaculty] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,50 +21,101 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
 
   const isInstructor = currentUser?.role === "INSTRUCTOR" || currentUser?.role === "faculty";
 
-  const fetchStudentFacultyData = () => {
+  const fetchStudentFacultyData = async () => {
     try {
       setLoading(true);
-      const userIdentifier = currentUser?.id || currentUser?.email || "";
-      let enrollments = getLocalEnrollments(userIdentifier);
       
-      // Ultra-aggressive fallback: If empty, scan all local storage for any enrollments
-      if (!enrollments || enrollments.length === 0) {
+      // 1. Gather from local storage for current user ID & email
+      let localEnrId = getLocalEnrollments(currentUser?.id);
+      let localEnrEmail = getLocalEnrollments(currentUser?.email);
+      let allEnrollments: any[] = [...localEnrId, ...localEnrEmail];
+
+      // 2. Scan all storage keys as aggressive fallback
+      try {
+        const raw = localStorage.getItem("msa_user_enrollments_registry");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            allEnrollments = [...allEnrollments, ...parsed];
+          } else if (typeof parsed === 'object') {
+            Object.values(parsed).forEach((arr: any) => {
+              if (Array.isArray(arr)) allEnrollments = [...allEnrollments, ...arr];
+            });
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+
+      // 3. Remote API fetch if currentUser has an ID
+      if (currentUser?.id) {
         try {
-          const raw = localStorage.getItem("msa_user_enrollments_registry");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              enrollments = parsed;
-            } else if (typeof parsed === 'object') {
-              let allParsed: any[] = [];
-              Object.values(parsed).forEach((arr: any) => {
-                if (Array.isArray(arr)) allParsed = [...allParsed, ...arr];
-              });
-              enrollments = allParsed;
+          const res = await fetch(`/api/registration/student/${currentUser.id}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.enrollments && Array.isArray(json.enrollments)) {
+              allEnrollments = [...allEnrollments, ...json.enrollments];
             }
           }
         } catch (e) {
-          console.warn(e);
+          console.warn("Backend student fetch notice:", e);
         }
       }
-      
-      const facultyMap = new Map();
-      
-      (enrollments || []).forEach((e: any, idx: number) => {
-        const course = e?.section?.course || e?.course || { code: e?.id || `C-${idx}`, title: "Enrolled Course" };
-        const instructor = e?.section?.instructor || e?.instructor || course?.instructor || { name: "Faculty Assigned", title: "Professor" };
-        
-        let instructorName = "Unknown Faculty";
-        if (typeof instructor === "string") {
-            instructorName = instructor;
-        } else if (instructor && instructor.name) {
-            instructorName = instructor.name;
+
+      // Deduplicate enrollments by course code or id
+      const uniqueEnrollments = new Map<string, any>();
+      allEnrollments.forEach((e) => {
+        const key = e?.section?.course?.code || e?.section?.courseId || e?.course?.code || e?.code || e?.id;
+        if (key && !uniqueEnrollments.has(key)) {
+          uniqueEnrollments.set(key, e);
         }
+      });
+
+      const enrollmentsToProcess = Array.from(uniqueEnrollments.values());
+
+      const facultyMap = new Map();
+
+      enrollmentsToProcess.forEach((e: any, idx: number) => {
+        let course = e?.section?.course || e?.course || (e?.code ? e : null) || { code: e?.id || `C-${idx}`, title: "Enrolled Course" };
+        let courseCode = course.code || course.id || "";
         
+        // Find matching course from EXPANDED_COURSE_CATALOG for rich details if available
+        const catalogMatch = EXPANDED_COURSE_CATALOG.find(
+          (c) => c.code.toLowerCase() === courseCode.toLowerCase() || c.id.toLowerCase() === courseCode.toLowerCase()
+        );
+
+        if (catalogMatch) {
+          course = { ...catalogMatch, ...course };
+        }
+
+        let instructor = e?.section?.instructor || e?.instructor || course?.instructor || catalogMatch?.instructor;
+
+        let instructorName = "Faculty Member";
+        let title = "Professor";
+        let avatar = "";
+
+        if (typeof instructor === "string" && instructor.trim() && instructor !== "Faculty Assigned") {
+          instructorName = instructor;
+        } else if (instructor && typeof instructor === "object") {
+          if (instructor.name && instructor.name !== "Faculty Assigned") {
+            instructorName = instructor.name;
+          }
+          if (instructor.title) title = instructor.title;
+          if (instructor.avatar) avatar = instructor.avatar;
+        }
+
+        // Fallback to catalog match instructor if name is generic
+        if ((instructorName === "Faculty Member" || instructorName === "Faculty Assigned") && catalogMatch?.instructor) {
+          instructorName = catalogMatch.instructor.name || instructorName;
+          title = catalogMatch.instructor.title || title;
+          avatar = catalogMatch.instructor.avatar || avatar;
+        }
+
         if (!facultyMap.has(instructorName)) {
           facultyMap.set(instructorName, {
-            ...(typeof instructor === "object" ? instructor : {}),
             name: instructorName,
+            title: title || "Professor",
+            avatar: avatar,
             courses: [course]
           });
         } else {
@@ -71,7 +125,7 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
           }
         }
       });
-      
+
       setStudentFaculty(Array.from(facultyMap.values()));
     } catch (err) {
       console.error("Failed to load student faculty data:", err);
@@ -81,8 +135,6 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
   };
 
   useEffect(() => {
-    if (!currentUser) return;
-    
     if (isInstructor) {
       fetchInstructorData();
     } else {
