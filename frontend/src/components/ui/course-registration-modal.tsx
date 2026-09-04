@@ -111,6 +111,9 @@ export function CourseRegistrationModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: currentUser.id,
+          userName: currentUser.name,
+          userEmail: currentUser.email,
+          courseId: course?.id,
           sectionId: selectedSection.id,
         }),
       });

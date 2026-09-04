@@ -4,9 +4,15 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Helper to retrieve student user from database safely
-async function getStudent(userId: string, email?: string) {
+// Helper to retrieve or ensure student user in database safely
+async function getStudent(userId?: string, userName?: string, email?: string) {
   if (!userId && !email) return null;
+
+  const normalizedEmail = email
+    ? email.trim().toLowerCase()
+    : userId && userId.includes('@')
+    ? userId.trim().toLowerCase()
+    : undefined;
 
   try {
     if (userId) {
@@ -14,18 +20,35 @@ async function getStudent(userId: string, email?: string) {
         where: {
           OR: [
             { id: userId },
-            { email: userId.trim().toLowerCase() }
+            ...(normalizedEmail ? [{ email: normalizedEmail }] : [])
           ]
         }
       });
       if (user) return user;
     }
 
-    if (email) {
+    if (normalizedEmail) {
       const user = await prisma.user.findUnique({
-        where: { email: email.trim().toLowerCase() }
+        where: { email: normalizedEmail }
       });
       if (user) return user;
+    }
+
+    // Auto-create student record if missing so enrollment always succeeds
+    if (normalizedEmail || userId) {
+      const emailToUse = normalizedEmail || `${userId}@student.academia.edu`;
+      const nameToUse = userName || emailToUse.split('@')[0];
+      const newUser = await prisma.user.create({
+        data: {
+          ...(userId && !userId.includes('@') ? { id: userId } : {}),
+          name: nameToUse,
+          email: emailToUse,
+          role: 'STUDENT',
+          studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
+          major: 'Computer Science & Engineering',
+        }
+      });
+      return newUser;
     }
 
     return null;
@@ -98,10 +121,10 @@ router.get('/student/:userId', async (req: Request, res: Response) => {
 
 // Register for a course section
 router.post('/enroll', async (req: Request, res: Response) => {
-  const { userId, sectionId, courseId, userName, userEmail } = req.body;
+  const { userId, sectionId, courseId, courseCode, userName, userEmail } = req.body;
 
   try {
-    const user = await getOrCreateStudent(userId, userName, userEmail);
+    const user = await getStudent(userId, userName, userEmail);
     if (!user) {
       return res.status(400).json({ error: 'Could not authenticate student account for registration.' });
     }
@@ -124,10 +147,15 @@ router.post('/enroll', async (req: Request, res: Response) => {
       });
     }
 
-    // If sectionId not provided or not found, try resolving via courseId
-    if (!targetSection && courseId) {
+    // If sectionId not provided or not found, try resolving via courseId or courseCode
+    if (!targetSection && (courseId || courseCode)) {
       targetSection = await prisma.courseSection.findFirst({
-        where: { courseId },
+        where: {
+          OR: [
+            ...(courseId ? [{ courseId }] : []),
+            ...(courseCode ? [{ course: { code: courseCode } }] : [])
+          ]
+        },
         include: {
           course: true,
           slots: true,
@@ -146,6 +174,9 @@ router.post('/enroll', async (req: Request, res: Response) => {
       let course = null;
       if (courseId) {
         course = await prisma.course.findUnique({ where: { id: courseId } });
+      }
+      if (!course && courseCode) {
+        course = await prisma.course.findFirst({ where: { code: courseCode } });
       }
       if (!course) {
         course = await prisma.course.findFirst();
@@ -201,10 +232,10 @@ router.post('/enroll', async (req: Request, res: Response) => {
     }
 
     // 2. Check Credit Limit (Max 24 Credits)
-    const currentCredits = existingEnrollments.reduce((sum, e) => sum + e.section.course.credits, 0);
-    if (currentCredits + targetSection.course.credits > 24) {
+    const currentCredits = existingEnrollments.reduce((sum, e) => sum + (e.section?.course?.credits || 3), 0);
+    if (currentCredits + (targetSection.course?.credits || 3) > 24) {
       return res.status(400).json({
-        error: `Credit limit reached. Maximum allowed is 24 credits (Current: ${currentCredits}, Adding: ${targetSection.course.credits}).`
+        error: `Credit limit reached. Maximum allowed is 24 credits (Current: ${currentCredits}, Adding: ${targetSection.course?.credits || 3}).`
       });
     }
 
@@ -253,3 +284,4 @@ router.post('/drop', async (req: Request, res: Response) => {
 });
 
 export default router;
+
