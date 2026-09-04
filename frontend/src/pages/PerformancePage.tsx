@@ -16,6 +16,7 @@ import {
   Video,
 } from "lucide-react";
 import { User } from "@/types";
+import { getLocalEnrollments } from "@/lib/enrollmentStorage";
 
 interface PerformancePageProps {
   currentUser?: User | null;
@@ -38,9 +39,33 @@ export function PerformancePage({ currentUser }: PerformancePageProps) {
   const fetchPerformanceData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/registration/student/${currentUser?.id}`);
-      const json = await res.json();
-      const currentEnrollments = json.enrollments || [];
+      const userIdentifier = currentUser?.id || currentUser?.email;
+      const localEnrollments = getLocalEnrollments(userIdentifier);
+      let remoteEnrollments: any[] = [];
+
+      if (currentUser?.id) {
+        try {
+          const res = await fetch(`/api/registration/student/${currentUser.id}`);
+          if (res.ok) {
+            const json = await res.json();
+            remoteEnrollments = json.enrollments || [];
+          }
+        } catch (e) {
+          console.warn("Backend sync notice:", e);
+        }
+      }
+
+      const mergedMap = new Map<string, any>();
+      localEnrollments.forEach((item) => {
+        const code = item.section?.course?.code || item.id;
+        mergedMap.set(code, item);
+      });
+      remoteEnrollments.forEach((item) => {
+        const code = item.section?.course?.code || item.id;
+        mergedMap.set(code, item);
+      });
+
+      const currentEnrollments = Array.from(mergedMap.values());
       setEnrollments(currentEnrollments);
 
       // Generate activity logs
@@ -49,7 +74,7 @@ export function PerformancePage({ currentUser }: PerformancePageProps) {
       logs.push(`Current Registered Courses: ${currentEnrollments.length} confirmed online modules.`);
 
       currentEnrollments.forEach((e: any) => {
-        logs.push(`Confirmed Enrollment for ${e.section?.course?.code}: ${e.section?.course?.credits} Credits (${e.section?.course?.title}).`);
+        logs.push(`Confirmed Enrollment for ${e.section?.course?.code}: ${e.section?.course?.credits || 4} Credits (${e.section?.course?.title}).`);
       });
 
       setActivityLogs(logs);

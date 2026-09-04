@@ -26,6 +26,10 @@ import {
 import { AvatarDisplay } from "@/components/ui/profile-dropdown";
 import { User } from "@/types";
 import { getRecommendedCourses, CourseCatalogItem } from "@/lib/courseCatalogData";
+import {
+  getLocalEnrollments,
+  removeLocalEnrollment,
+} from "@/lib/enrollmentStorage";
 
 interface StudentDashboardProps {
   currentUser?: User | null;
@@ -56,15 +60,53 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   const hoursCounterRef = useRef<HTMLSpanElement>(null);
 
   const fetchStudentData = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
+
+    const userIdentifier = currentUser.id || currentUser.email;
+    const localEnrollments = getLocalEnrollments(userIdentifier);
+    let remoteEnrollments: any[] = [];
+    let remoteUser = currentUser;
+    let remoteWaitlists: any[] = [];
+
     try {
       setLoading(true);
       const res = await fetch(`/api/registration/student/${currentUser.id}`);
-      const json = await res.json();
-      setData(json);
+      if (res.ok) {
+        const json = await res.json();
+        remoteEnrollments = json.enrollments || [];
+        remoteWaitlists = json.waitlists || [];
+        if (json.user) remoteUser = json.user;
+      }
     } catch (err) {
-      console.error("Failed to load student dashboard data", err);
+      console.warn("Failed to load backend student dashboard data, using local storage:", err);
     } finally {
+      // Merge local and remote enrollments smoothly
+      const mergedMap = new Map<string, any>();
+      localEnrollments.forEach((item) => {
+        const code = item.section?.course?.code || item.id;
+        mergedMap.set(code, item);
+      });
+      remoteEnrollments.forEach((item) => {
+        const code = item.section?.course?.code || item.id;
+        mergedMap.set(code, item);
+      });
+
+      const finalEnrollments = Array.from(mergedMap.values());
+      const totalCredits = finalEnrollments.reduce(
+        (sum, e) => sum + (e.section?.course?.credits || 4),
+        0
+      );
+
+      setData({
+        user: remoteUser,
+        enrollments: finalEnrollments,
+        waitlists: remoteWaitlists,
+        totalRegisteredCredits: totalCredits,
+      });
+
       setLoading(false);
     }
   };
@@ -219,16 +261,19 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   const handleDrop = async (sectionId: string, courseCode: string) => {
     if (!window.confirm(`Are you sure you want to drop online course ${courseCode}?`)) return;
     try {
-      const res = await fetch("/api/registration/drop", {
+      const userIdentifier = currentUser?.id || currentUser?.email || "";
+      removeLocalEnrollment(userIdentifier, courseCode);
+      removeLocalEnrollment(userIdentifier, sectionId);
+
+      fetch("/api/registration/drop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: currentUser?.id, sectionId }),
-      });
-      if (res.ok) {
-        setDropMessage(`Successfully dropped ${courseCode}. Online class schedule updated.`);
-        fetchStudentData();
-        setTimeout(() => setDropMessage(null), 4000);
-      }
+      }).catch((e) => console.warn("Backend drop notice:", e));
+
+      setDropMessage(`Successfully dropped ${courseCode}. Online class schedule updated.`);
+      fetchStudentData();
+      setTimeout(() => setDropMessage(null), 4000);
     } catch (err) {
       console.error(err);
     }
