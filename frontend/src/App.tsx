@@ -13,20 +13,10 @@ import { InstructorPage } from './pages/InstructorPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 
-const MSA_SESSION_VERSION = "v2026_08_26_fresh_zero";
-
 export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      const version = localStorage.getItem('msa_session_version');
-      if (version !== MSA_SESSION_VERSION) {
-        localStorage.removeItem('msa_custom_user_profile');
-        localStorage.removeItem('msa_registered_accounts_registry');
-        localStorage.removeItem('msa_custom_onboarding');
-        localStorage.setItem('msa_session_version', MSA_SESSION_VERSION);
-        return null;
-      }
       const saved = localStorage.getItem('msa_custom_user_profile');
       if (saved) return JSON.parse(saved);
     } catch (e) {

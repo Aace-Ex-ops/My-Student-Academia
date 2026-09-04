@@ -266,21 +266,28 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       return;
     }
 
-    // 1. Strictly query backend DB to check if this user account exists
+    // 1. Check if account already exists in local registry OR backend DB
     let existingUser: User | null = null;
-    try {
-      const res = await apiFetch("/api/auth/check-user", {
-        method: "POST",
-        body: JSON.stringify({ email: emailToUse }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.exists && data.user) {
-          existingUser = data.user;
+    const registry = getRegisteredAccounts();
+    if (registry[emailToUse]) {
+      existingUser = registry[emailToUse];
+    }
+
+    if (!existingUser) {
+      try {
+        const res = await apiFetch("/api/auth/check-user", {
+          method: "POST",
+          body: JSON.stringify({ email: emailToUse }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.exists && data.user) {
+            existingUser = data.user;
+          }
         }
+      } catch (err) {
+        console.warn("Backend check-user error:", err);
       }
-    } catch (err) {
-      console.warn("Backend check-user error:", err);
     }
 
     if (existingUser) {
@@ -304,28 +311,47 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       }, 600);
 
     } else {
-      // ✦ FIRST-TIME USER (Not in database): DO NOT log in directly! ✦
-      // Purge any stale cache for this email
+      // ✦ FIRST-TIME GOOGLE USER: Auto-create account, save, and navigate to onboarding ✦
+      const newUser: User = {
+        id: `student-${Date.now()}`,
+        name: nameToUse,
+        email: emailToUse,
+        username: `@${nameToUse.toLowerCase().replace(/\s+/g, "_")}`,
+        role: "STUDENT",
+        studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
+        university: "Indian Institute of Technology (IIT) Kharagpur",
+        major: "Computer Science & Engineering",
+        phone: "+91 9876543210",
+        avatar: "google_photo",
+        avatarIcon: "🌐",
+        avatarUrl: photoToUse,
+        googlePhotoUrl: photoToUse,
+        avatarBg: "from-amber-500 to-orange-600",
+      };
+
+      saveRegisteredAccount(newUser);
+
       try {
-        const reg = getRegisteredAccounts();
-        if (reg[emailToUse]) {
-          delete reg[emailToUse];
-          localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(reg));
-        }
+        await apiFetch("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            name: nameToUse,
+            email: emailToUse,
+            password: "google_oauth_authenticated",
+          }),
+        });
       } catch (e) {}
 
-      // Switch to 'Create Account' tab, pre-fill Name & Email, and prompt user to set & confirm password!
-      setIsSignUp(true);
-      setFullName(nameToUse);
-      setEmail(emailToUse);
-      setGoogleAvatarUrl(photoToUse);
-      setPassword("");
-      setConfirmPassword("");
-      setErrorMessage(null);
-      setShowCreatePromptForEmail(null);
-      setNotification(
-        `Google Account verified (${emailToUse})! Please set and confirm your custom password to complete account registration.`
-      );
+      if (onLoginUser) {
+        onLoginUser(newUser);
+      }
+      localStorage.setItem("msa_custom_user_profile", JSON.stringify(newUser));
+
+      setNotification(`Welcome, ${nameToUse}! Account created via Google. Redirecting to onboarding...`);
+
+      setTimeout(() => {
+        navigate("/onboarding");
+      }, 600);
     }
   };
 
@@ -385,10 +411,26 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         return;
       }
 
+      // Check if account exists locally or on backend
       const registry = getRegisteredAccounts();
-      if (registry[emailToUse]) {
+      let existsLocally = !!registry[emailToUse];
+      let existsOnBackend = false;
+
+      try {
+        const checkRes = await apiFetch("/api/auth/check-user", {
+          method: "POST",
+          body: JSON.stringify({ email: emailToUse }),
+        });
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (checkData.exists) existsOnBackend = true;
+        }
+      } catch (e) {}
+
+      if (existsLocally || existsOnBackend) {
         setIsLoading(false);
-        setErrorMessage("An account with this email already exists. Please sign in.");
+        setErrorMessage("An account with this email already exists. Please sign in instead.");
+        setIsSignUp(false);
         return;
       }
 
@@ -410,7 +452,8 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
             backendUser = data.user;
           } else if (res.status === 409) {
             setIsLoading(false);
-            setErrorMessage("An account with this email already exists. Please sign in.");
+            setErrorMessage("An account with this email already exists. Please sign in instead.");
+            setIsSignUp(false);
             return;
           }
         }
