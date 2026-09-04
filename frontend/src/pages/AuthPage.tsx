@@ -16,6 +16,7 @@ import {
   Mail,
   User as UserIcon,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { SplineRobot } from "@/components/ui/spline-robot";
 import { AsciiTextAnimation } from "@/components/ui/ascii-text-animation";
@@ -77,6 +78,16 @@ function saveRegisteredAccount(user: User) {
   }
 }
 
+function extractNameFromEmail(emailStr: string): string {
+  if (!emailStr || !emailStr.includes("@")) return "Scholar";
+  const handle = emailStr.split("@")[0];
+  const parts = handle.replace(/[^a-zA-Z]/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Scholar";
+  return parts
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -92,6 +103,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   // Feedback States
   const [notification, setNotification] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [firstTimeNotice, setFirstTimeNotice] = useState<string | null>(null);
   const [showCreatePromptForEmail, setShowCreatePromptForEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -171,7 +183,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
 
       const payload = decodeJwt(response.credential);
       if (payload) {
-        const name = payload.name || payload.given_name || "Aditya Chatterjee";
+        const name = payload.name || payload.given_name || extractNameFromEmail(payload.email || "");
         const emailAddr = payload.email || "";
         const picture =
           payload.picture ||
@@ -250,9 +262,10 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     googleId?: string;
   }) => {
     setErrorMessage(null);
+    setFirstTimeNotice(null);
     setShowCreatePromptForEmail(null);
     const emailToUse = userData.email.trim().toLowerCase();
-    const nameToUse = userData.name.trim() || emailToUse.split("@")[0] || "Student";
+    const nameToUse = userData.name.trim() || extractNameFromEmail(emailToUse);
     const photoToUse =
       userData.picture ||
       "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop";
@@ -291,7 +304,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     }
 
     if (existingUser) {
-      // ✦ EXISTING USER: Log in directly and go straight to /dashboard! ✦
+      // ✦ EXISTING RETURNING USER: Log in directly & go straight to /dashboard! ✦
       const loggedInUser: User = {
         ...existingUser,
         googlePhotoUrl: photoToUse || existingUser.googlePhotoUrl,
@@ -311,53 +324,19 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       }, 600);
 
     } else {
-      // ✦ FIRST-TIME GOOGLE USER: Auto-create account, save, and navigate to onboarding ✦
-      const newUser: User = {
-        id: `student-${Date.now()}`,
-        name: nameToUse,
-        email: emailToUse,
-        username: `@${nameToUse.toLowerCase().replace(/\s+/g, "_")}`,
-        role: "STUDENT",
-        studentId: `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
-        university: "Indian Institute of Technology (IIT) Kharagpur",
-        major: "Computer Science & Engineering",
-        phone: "+91 9876543210",
-        avatar: "google_photo",
-        avatarIcon: "🌐",
-        avatarUrl: photoToUse,
-        googlePhotoUrl: photoToUse,
-        avatarBg: "from-amber-500 to-orange-600",
-      };
-
-      saveRegisteredAccount(newUser);
-
-      try {
-        await apiFetch("/api/auth/register", {
-          method: "POST",
-          body: JSON.stringify({
-            name: nameToUse,
-            email: emailToUse,
-            password: "google_oauth_authenticated",
-          }),
-        });
-      } catch (e) {}
-
-      if (onLoginUser) {
-        onLoginUser(newUser);
-      }
-      localStorage.setItem("msa_custom_user_profile", JSON.stringify(newUser));
-
-      setNotification(`Welcome, ${nameToUse}! Account created via Google. Redirecting to onboarding...`);
-
-      setTimeout(() => {
-        navigate("/onboarding");
-      }, 600);
+      // ✦ FIRST-TIME GOOGLE USER: Pre-fill details from Gmail & prompt password creation ✦
+      setIsSignUp(true);
+      setEmail(emailToUse);
+      setFullName(nameToUse);
+      setGoogleAvatarUrl(photoToUse);
+      setFirstTimeNotice(`✨ Google account verified for ${nameToUse}! Details pre-filled from your Gmail ID. Please enter a password and confirm password below to create your account.`);
     }
   };
 
   // Direct Interactive Google Sign In Trigger
   const triggerGoogleSignIn = () => {
     setErrorMessage(null);
+    setFirstTimeNotice(null);
     setShowCreatePromptForEmail(null);
 
     if (window.google?.accounts?.id) {
@@ -381,10 +360,10 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
     e.preventDefault();
     setErrorMessage(null);
     setNotification(null);
+    setFirstTimeNotice(null);
     setShowCreatePromptForEmail(null);
 
     const emailToUse = email.trim().toLowerCase();
-    const nameToUse = fullName.trim() || emailToUse.split("@")[0] || "Student";
 
     const validation = validateCertifiedEmail(emailToUse);
     if (!validation.isValid || !validation.isCertified) {
@@ -394,6 +373,8 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       );
       return;
     }
+
+    const nameToUse = fullName.trim() || extractNameFromEmail(emailToUse);
 
     setIsLoading(true);
 
@@ -467,6 +448,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         email: emailToUse,
         username: `@${nameToUse.toLowerCase().replace(/\s+/g, "_")}`,
         role: "STUDENT",
+        password: password,
         studentId: backendUser?.studentId || `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
         university: "Indian Institute of Technology (IIT) Kharagpur",
         major: "Computer Science & Engineering",
@@ -493,6 +475,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       }, 800);
 
     } else {
+      // SIGN IN MODE
       let authenticatedUser: User | null = null;
 
       const registry = getRegisteredAccounts();
@@ -522,21 +505,30 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         }
       }
 
+      // FIRST TIME USER trying to sign in -> Auto-switch to Create Account & pre-fill name from Gmail!
       if (!authenticatedUser) {
         setIsLoading(false);
-        setShowCreatePromptForEmail(emailToUse);
-        setErrorMessage(
-          `No account found with ${emailToUse}. Only created accounts can log in. Please click 'Create Account' first.`
-        );
+        setIsSignUp(true);
+        setEmail(emailToUse);
+        const derivedName = extractNameFromEmail(emailToUse);
+        setFullName(derivedName);
+        setFirstTimeNotice(`✨ First-time MSA user detected! We've pre-filled your details from your Gmail ID (${derivedName}). Please set a password and confirm password below to create your account.`);
+        return;
+      }
+
+      // Verify Password if account has a password configured
+      if (password && authenticatedUser.password && authenticatedUser.password !== password) {
+        setIsLoading(false);
+        setErrorMessage("Incorrect password. Please verify your password or switch to Create Account.");
         return;
       }
 
       const loggedInUser: User = {
         ...authenticatedUser,
         id: authenticatedUser.id || `student-${Date.now()}`,
-        name: authenticatedUser.name || emailToUse.split("@")[0],
+        name: authenticatedUser.name || nameToUse,
         email: emailToUse,
-        username: authenticatedUser.username || `@${(authenticatedUser.name || emailToUse.split("@")[0]).toLowerCase().replace(/\s+/g, "_")}`,
+        username: authenticatedUser.username || `@${(authenticatedUser.name || nameToUse).toLowerCase().replace(/\s+/g, "_")}`,
         role: authenticatedUser.role || "STUDENT",
         studentId: authenticatedUser.studentId || `STU-2026-${Math.floor(100 + Math.random() * 900)}`,
         university: authenticatedUser.university || "Indian Institute of Technology (IIT) Kharagpur",
@@ -686,6 +678,14 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
               <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2.5 shadow-lg animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                 <span>{notification}</span>
+              </div>
+            )}
+
+            {/* First-time User Pre-fill Notice Banner */}
+            {firstTimeNotice && (
+              <div className="p-3.5 rounded-2xl bg-[#FF6D1F]/15 border border-[#FF6D1F]/40 text-[#FAF3E1] text-xs font-bold flex items-start gap-2.5 shadow-lg animate-in fade-in slide-in-from-top-2">
+                <Sparkles className="w-4 h-4 text-[#FF6D1F] flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{firstTimeNotice}</span>
               </div>
             )}
 

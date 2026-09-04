@@ -3,6 +3,8 @@ export interface User {
   name: string;
   email: string;
   username?: string;
+  password?: string;
+  onboardingCompleted?: boolean;
   role?: "STUDENT" | "INSTRUCTOR" | "ADMIN" | "student" | "faculty" | "admin";
   avatar?: string;
   avatarIcon?: string;

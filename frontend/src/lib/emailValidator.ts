@@ -80,7 +80,20 @@ export function validateCertifiedEmail(email: string): EmailValidationResult {
     };
   }
 
+  const username = parts[0];
   const domain = parts[1];
+
+  // 1b. Gibberish / Fake keyboard mash detection (e.g. jchbzjcbs or 6+ consecutive consonants without vowels)
+  const isGibberish = username.length >= 6 && (!/[aeiouy]/i.test(username) || /[bcdfghjklmnpqrstvwxz]{6,}/i.test(username));
+  if (isGibberish) {
+    return {
+      isValid: false,
+      isCertified: false,
+      isDisposable: false,
+      isAcademicDomain: false,
+      error: 'Please enter a valid, active Gmail or student email address. Fake or random keyboard-mash emails are not supported.',
+    };
+  }
 
   // 2. Reject Disposable / Burner Domains
   if (DISPOSABLE_DOMAINS.has(domain)) {
