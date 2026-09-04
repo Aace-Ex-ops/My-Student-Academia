@@ -100,7 +100,9 @@ export function ProfileDropdown({
 
   const handleSignOut = () => {
     setIsOpen(false);
-    navigate("/");
+    localStorage.removeItem("msa_custom_user_profile");
+    // Reload the page to clear any React state in App.tsx
+    window.location.href = "/";
   };
 
   const activeUser = currentUser || {

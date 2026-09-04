@@ -110,6 +110,13 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
+
   // DOM Refs
   const formCardRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
