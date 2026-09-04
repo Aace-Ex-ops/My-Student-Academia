@@ -36,6 +36,12 @@ export function getLocalEnrollments(userIdOrEmail?: string | null): StoredEnroll
     const raw = localStorage.getItem(ENROLLMENTS_KEY);
     if (!raw) return [];
     const registry = JSON.parse(raw);
+    
+    // Fix: If legacy data was an array, it has no user keys.
+    if (Array.isArray(registry)) {
+      return [];
+    }
+    
     const userKey = userIdOrEmail.toLowerCase();
     return registry[userKey] || [];
   } catch (e) {
@@ -87,7 +93,13 @@ export function saveLocalEnrollment(userIdOrEmail: string, course: any): StoredE
 
   try {
     const raw = localStorage.getItem(ENROLLMENTS_KEY);
-    const registry = raw ? JSON.parse(raw) : {};
+    let registry = raw ? JSON.parse(raw) : {};
+    
+    // Fix: If legacy data was an array, JSON.stringify will ignore string properties.
+    if (Array.isArray(registry)) {
+      registry = {}; 
+    }
+    
     registry[userKey] = [...(registry[userKey] || []), newEnrollment];
     localStorage.setItem(ENROLLMENTS_KEY, JSON.stringify(registry));
   } catch (e) {
@@ -102,7 +114,13 @@ export function removeLocalEnrollment(userIdOrEmail: string, courseCodeOrId: str
   try {
     const raw = localStorage.getItem(ENROLLMENTS_KEY);
     if (!raw) return;
-    const registry = JSON.parse(raw);
+    let registry = JSON.parse(raw);
+    
+    // Fix: If legacy data was an array, reset it.
+    if (Array.isArray(registry)) {
+      registry = {};
+    }
+    
     if (registry[userKey]) {
       registry[userKey] = registry[userKey].filter(
         (e: StoredEnrollment) =>

@@ -62,7 +62,13 @@ const REGISTERED_USERS_KEY = "msa_registered_accounts_registry";
 function getRegisteredAccounts(): Record<string, User> {
   try {
     const data = localStorage.getItem(REGISTERED_USERS_KEY);
-    return data ? JSON.parse(data) : {};
+    if (!data) return {};
+    const parsed = JSON.parse(data);
+    // Fix: If legacy data was an array, reset it.
+    if (Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed;
   } catch {
     return {};
   }

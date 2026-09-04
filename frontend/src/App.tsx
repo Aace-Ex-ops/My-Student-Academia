@@ -85,7 +85,13 @@ export function AppContent() {
 
     try {
       const rawReg = localStorage.getItem('msa_registered_accounts_registry');
-      const reg = rawReg ? JSON.parse(rawReg) : {};
+      let reg = rawReg ? JSON.parse(rawReg) : {};
+      
+      // Fix: If legacy data was an array, JSON.stringify will ignore string properties.
+      if (Array.isArray(reg)) {
+        reg = {};
+      }
+      
       reg[updatedUser.email.toLowerCase()] = updatedUser;
       localStorage.setItem('msa_registered_accounts_registry', JSON.stringify(reg));
     } catch (e) {}
