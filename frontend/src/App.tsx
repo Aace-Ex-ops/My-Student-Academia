@@ -13,6 +13,7 @@ import { InstructorPage } from './pages/InstructorPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 import { apiFetch } from './lib/api';
+import { bruteForcePurgeAllUserData } from './lib/accountPurge';
 
 export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
@@ -29,8 +30,25 @@ export function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
+    // ✦ INSTANT BRUTE-FORCE URL PURGE TRIGGER ✦
+    // Allows instant wipe via: https://my-student-academia.pages.dev/?action=wipe-account or ?reset=true
+    const params = new URLSearchParams(window.location.search);
+    if (
+      params.get('action') === 'wipe-account' ||
+      params.get('action') === 'purge' ||
+      params.get('reset') === 'true' ||
+      params.get('clear') === 'true'
+    ) {
+      bruteForcePurgeAllUserData(undefined, true).then(() => {
+        setCurrentUser(null);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        navigate('/auth?purged=true', { replace: true });
+      });
+      return;
+    }
+
     fetchUsers();
-  }, []);
+  }, [location.search, navigate]);
 
   const fetchUsers = async () => {
     try {

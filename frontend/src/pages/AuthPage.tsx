@@ -17,12 +17,14 @@ import {
   User as UserIcon,
   Check,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { SplineRobot } from "@/components/ui/spline-robot";
 import { AsciiTextAnimation } from "@/components/ui/ascii-text-animation";
 import { User } from "@/types";
 import { apiFetch } from "@/lib/api";
 import { validateCertifiedEmail } from "@/lib/emailValidator";
+import { bruteForcePurgeAllUserData } from "@/lib/accountPurge";
 
 declare global {
   interface Window {
@@ -122,6 +124,27 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
       navigate("/dashboard");
     }
   }, [currentUser, navigate]);
+
+  // Check for purged notification
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("purged") === "true") {
+      setNotification("✨ Account and all stored data were permanently deleted. You can register or sign in freshly.");
+    }
+  }, []);
+
+  const handleBruteForceReset = async () => {
+    if (window.confirm("Are you sure you want to completely wipe all stored accounts and registrations on this device? This action cannot be undone.")) {
+      setIsLoading(true);
+      await bruteForcePurgeAllUserData(undefined, true);
+      setIsLoading(false);
+      setNotification("✨ All stored accounts, profiles, and registrations have been purged successfully.");
+      setEmail("");
+      setFullName("");
+      setPassword("");
+      setConfirmPassword("");
+    }
+  };
 
   // DOM Refs
   const formCardRef = useRef<HTMLDivElement>(null);
@@ -939,6 +962,22 @@ export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps
             {/* Official Google OAuth GSI Button Container */}
             <div className="flex flex-col items-center justify-center gap-2 w-full pt-1">
               <div ref={googleBtnContainerRef} className="w-full flex justify-center min-h-[44px]" />
+            </div>
+
+            {/* Brute-Force Reset / Wipe Account Option */}
+            <div className="pt-3 border-t border-white/5 flex flex-col items-center justify-center gap-1.5 text-center">
+              <button
+                type="button"
+                onClick={handleBruteForceReset}
+                className="text-[11px] text-rose-400/80 hover:text-rose-300 font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer hover:underline"
+                title="Wipes local storage account registry and sessions on this browser"
+              >
+                <Trash2 className="w-3 h-3 text-rose-400" />
+                <span>Reset & Brute-Force Wipe Stored Accounts</span>
+              </button>
+              <span className="text-[10px] text-white/30 font-mono">
+                Direct URL: ?action=wipe-account
+              </span>
             </div>
 
           </div>

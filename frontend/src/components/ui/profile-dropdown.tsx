@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { bruteForcePurgeAllUserData } from "@/lib/accountPurge";
 
 interface ProfileDropdownProps {
   currentUser?: any;
@@ -114,37 +115,8 @@ export function ProfileDropdown({
     setIsDeleting(true);
     try {
       const email = activeUser.email || "";
-      const userId = activeUser.id || "";
-      
-      await apiFetch("/api/auth/delete-account", {
-        method: "POST",
-        body: JSON.stringify({ email, userId }),
-      }).catch((e) => console.warn(e));
-
-      // Remove from registries
-      try {
-        const raw = localStorage.getItem("msa_registered_accounts_registry");
-        if (raw) {
-          const reg = JSON.parse(raw);
-          if (email && reg[email.toLowerCase()]) {
-            delete reg[email.toLowerCase()];
-            localStorage.setItem("msa_registered_accounts_registry", JSON.stringify(reg));
-          }
-        }
-      } catch (e) {}
-
-      try {
-        const rawEnr = localStorage.getItem("msa_user_enrollments_registry");
-        if (rawEnr) {
-          const enr = JSON.parse(rawEnr);
-          if (email && enr[email.toLowerCase()]) delete enr[email.toLowerCase()];
-          if (userId && enr[userId.toLowerCase()]) delete enr[userId.toLowerCase()];
-          localStorage.setItem("msa_user_enrollments_registry", JSON.stringify(enr));
-        }
-      } catch (e) {}
-
-      localStorage.removeItem("msa_custom_user_profile");
-      window.location.href = "/";
+      await bruteForcePurgeAllUserData(email);
+      window.location.href = "/auth?purged=true";
     } catch (err) {
       console.error(err);
       setIsDeleting(false);
