@@ -30,6 +30,16 @@ export function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ✦ INSTANT SCROLL-TO-TOP ON ROUTE CHANGE ✦
+  // Prevents scroll offset disorientation when switching between Dashboard, Catalog, Chat, etc.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    const mainEl = document.querySelector("main");
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     // ✦ MANUAL URL PURGE TRIGGER (ONLY FIRED IF EXPLICITLY REQUESTED VIA URL) ✦
     // Allows explicit wipe via: https://my-student-academia.pages.dev/?action=wipe-account

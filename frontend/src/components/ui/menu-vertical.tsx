@@ -156,6 +156,7 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => setIsMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all group relative cursor-pointer",
                     isActive

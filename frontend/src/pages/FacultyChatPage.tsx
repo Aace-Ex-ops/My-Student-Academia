@@ -186,58 +186,51 @@ export function FacultyChatPage({ currentUser }: FacultyChatPageProps) {
   ];
 
   return (
-    <div className="h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] w-full bg-[#0B0A09] text-[#FAF3E1] flex flex-col font-sans select-none relative overflow-hidden box-border">
+    <div className="min-h-screen bg-[#0B0A09] text-[#FAF3E1] px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-left select-none font-sans relative overflow-hidden">
       {/* ✦ ARCHITECTURAL BLUEPRINT GRID & NEBULA BACKGROUND ✦ */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-15">
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-20">
         <div className="absolute top-16 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F5E7C6] to-transparent" />
         <div className="absolute bottom-20 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F5E7C6] to-transparent" />
         <div className="absolute top-0 bottom-0 left-12 sm:left-24 w-[1px] bg-gradient-to-b from-transparent via-[#F5E7C6] to-transparent" />
       </div>
 
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-3 flex-1 flex flex-col min-h-0 min-w-0 relative z-10 box-border">
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         
-        {/* Top Header / Breadcrumb - Compact & Flush */}
-        <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-[#F5E7C6]/15 flex-shrink-0 min-w-0">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#FAF3E1]/60 mb-0.5">
-              <Link to="/instructor" className="hover:text-[#FF6D1F] transition-colors flex items-center gap-1">
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Available Faculty</span>
-              </Link>
-              <ChevronRight className="w-3 h-3 text-[#FAF3E1]/40" />
-              <span className="text-[#FF6D1F] truncate">Academic Direct Messaging</span>
+        {/* Welcome Banner - Identical styling to InstructorPage and Dashboard */}
+        <div className="bg-[#121216]/90 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-[#F5E7C6]/15 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-black uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Academic Direct Messaging</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6D1F] flex-shrink-0" />
-              <h1 className="text-lg sm:text-xl font-black text-[#FAF3E1] truncate leading-tight">
-                Faculty Consultation Hub
-              </h1>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-[10px] font-black uppercase tracking-wider">
-                <Sparkles className="w-3 h-3" /> Live
-              </span>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-[#FAF3E1] tracking-tight">
+              Faculty Consultation Hub
+            </h1>
+            <p className="text-[#FAF3E1]/70 text-xs sm:text-sm mt-1 font-medium">
+              Direct, encrypted 1-on-1 academic consultation with your professors and department chairs.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-3">
             <Link
               to="/instructor"
-              className="px-3 py-1.5 rounded-xl bg-[#1A1A22] hover:bg-[#222228] border border-[#F5E7C6]/15 text-[#FAF3E1] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+              className="px-4 py-2.5 rounded-xl bg-[#1A1A22] hover:bg-[#222228] border border-[#F5E7C6]/15 text-[#FAF3E1] text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
             >
-              <UserCheck className="w-3.5 h-3.5 text-[#FF6D1F]" />
-              <span className="hidden sm:inline">All Faculty</span>
+              <UserCheck className="w-4 h-4 text-[#FF6D1F]" />
+              <span>Available Faculty</span>
             </Link>
             <Link
               to="/dashboard"
-              className="px-3 py-1.5 rounded-xl bg-[#FF6D1F]/20 hover:bg-[#FF6D1F]/30 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black flex items-center gap-1.5 transition-all shadow-sm"
+              className="px-4 py-2.5 rounded-xl bg-[#FF6D1F]/20 hover:bg-[#FF6D1F]/30 border border-[#FF6D1F]/40 text-[#FF6D1F] text-xs font-black flex items-center gap-2 transition-all shadow-sm"
             >
-              <GraduationCap className="w-3.5 h-3.5" />
+              <GraduationCap className="w-4 h-4" />
               <span>Dashboard</span>
             </Link>
           </div>
         </div>
 
-        {/* Main Split Chat Layout - Perfectly Fits Viewport Without Out-of-Bounds */}
-        <div className="flex-1 min-h-0 w-full min-w-0 bg-[#121216]/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-[#F5E7C6]/15 shadow-2xl overflow-hidden flex flex-col md:flex-row box-border">
+        {/* Main Split Chat Layout - Harmonious with all pages */}
+        <div className="bg-[#121216]/90 backdrop-blur-xl rounded-3xl border border-[#F5E7C6]/15 shadow-2xl overflow-hidden flex flex-col md:flex-row h-[640px] max-h-[75vh] w-full min-w-0">
           
           {/* LEFT SIDEBAR: Faculty Contact Roster */}
           <div
