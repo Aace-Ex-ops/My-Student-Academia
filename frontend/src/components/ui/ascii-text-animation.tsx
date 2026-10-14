@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AsciiTextAnimationProps {
-  text: "WELCOME BACK" | "WELCOME NEW USER";
+  text: "WELCOME BACK" | "WELCOME NEW USER" | "WELCOME FACULTY" | "WELCOME ADMIN";
   className?: string;
 }
 
@@ -24,8 +24,29 @@ const WELCOME_NEW_USER_ASCII = [
   "     \\/  \\/ \\___|_|\\___\\___/|_| |_| |_|\\___|     |_| \\_|\\___| \\_/\\_/    \\____/|___/\\___|_|   ",
 ];
 
+const WELCOME_FACULTY_ASCII = [
+  " __          __  _                               ______               _ _         ",
+  " \\ \\        / / | |                             |  ____|             | | |        ",
+  "  \\ \\  /\\  / /__| | ___ ___  _ __ ___   ___     | |__ __ _  ___ _   _| | |_ _   _ ",
+  "   \\ \\/  \\/ / _ \\ |/ __/ _ \\| '_ ` _ \\ / _ \\    |  __/ _` |/ __| | | | | __| | | |",
+  "    \\  /\\  /  __/ | (_| (_) | | | | | |  __/    | | | (_| | (__| |_| | | |_| |_| |",
+  "     \\/  \\/ \\___|_|\\___\\___/|_| |_| |_|\\___|    |_|  \\__,_|\\___|\\__,_|_|\\__|\\__, |",
+];
+
+const WELCOME_ADMIN_ASCII = [
+  " __          __  _                                    _       _           _       ",
+  " \\ \\        / / | |                             /\\   | |     | |         (_)      ",
+  "  \\ \\  /\\  / /__| | ___ ___  _ __ ___   ___    /  \\  | |   __| |_ __ ___  _ _ __  ",
+  "   \\ \\/  \\/ / _ \\ |/ __/ _ \\| '_ ` _ \\ / _ \\  / /\\ \\ | |  / _` | '_ ` _ \\| | '_ \\ ",
+  "    \\  /\\  /  __/ | (_| (_) | | | | | |  __/ / ____ \\| | | (_| | | | | | | | | | |",
+  "     \\/  \\/ \\___|_|\\___\\___/|_| |_| |_|\\___|/_/    \\_\\_|  \\__,_|_| |_| |_|_|_| |_|",
+];
+
 export function AsciiTextAnimation({ text, className = "" }: AsciiTextAnimationProps) {
-  const lines = text === "WELCOME BACK" ? WELCOME_BACK_ASCII : WELCOME_NEW_USER_ASCII;
+  let lines = WELCOME_BACK_ASCII;
+  if (text === "WELCOME NEW USER") lines = WELCOME_NEW_USER_ASCII;
+  else if (text === "WELCOME FACULTY") lines = WELCOME_FACULTY_ASCII;
+  else if (text === "WELCOME ADMIN") lines = WELCOME_ADMIN_ASCII;
   const [displayedLines, setDisplayedLines] = useState<string[]>(lines);
   const [glitchIndex, setGlitchIndex] = useState<number | null>(null);
 
