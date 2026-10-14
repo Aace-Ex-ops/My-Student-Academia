@@ -145,9 +145,9 @@ export function getPrioritizedModelPool(): string[] {
   return [...new Set([...pool, ...cooldown, ...GEMINI_CASCADE_MODELS])];
 }
 
-// Default configurations (offline built-in engine; keys are only stored in the user's private browser localStorage)
+// Default configurations: Gemini via secure server proxy (no client-side API keys)
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  provider: "offline",
+  provider: "gemini",
   apiKey: "",
   modelName: "gemini-3.5-flash",
 };
@@ -160,8 +160,8 @@ export function getStoredAIConfig(): AIConfig {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         return {
-          provider: parsed.provider || "offline",
-          apiKey: (parsed.apiKey || "").trim(),
+          provider: parsed.provider || "gemini",
+          apiKey: "",
           modelName: parsed.modelName || "gemini-3.5-flash",
         };
       }
@@ -684,182 +684,47 @@ export async function sendAIMessage({
 }> {
   const activeConfig = config || getStoredAIConfig();
 
-  // ── PATH A: GOOGLE GEMINI API (When Key Provided) ──
-  if (activeConfig.provider === "gemini" && activeConfig.apiKey && activeConfig.apiKey.trim()) {
+  // ── PATH A: SECURE SERVER PROXY (Google Gemini 3.5 Flash + Auto-Balancer) ──
+  if (activeConfig.provider === "gemini") {
     try {
-      const apiKey = activeConfig.apiKey.trim();
-      const model = activeConfig.modelName || "gemini-1.5-flash";
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-      // Build context grounding
-      let contextPrefix = "";
-      if (courseContext) {
-        const found = EXPANDED_COURSE_CATALOG.find(
-          (c) => c.code.toLowerCase() === courseContext.toLowerCase() || c.id === courseContext
-        );
-        if (found) {
-          contextPrefix += `[COURSE CONTEXT: The student is enrolled in ${found.code} - ${found.title}. Description: ${found.description}]\n\n`;
-        }
-      }
-
-      let modeInstruction = "";
-      if (mode === "SUMMARIZE") {
-        modeInstruction = `[MODE: SUMMARIZATION. Format your response into: 1) Executive TL;DR, 2) Key Terminology & Definitions, 3) Structured Chapter Breakdown, 4) High-Yield Exam Takeaways & Pitfalls to Avoid.]\n\n`;
-      } else if (mode === "FLASHCARDS") {
-        modeInstruction = `[MODE: FLASHCARDS. Create 5-8 structured Question & Answer pairs for active recall spaced repetition. Present each clearly.]\n\n`;
-      } else if (mode === "PRACTICE") {
-        modeInstruction = `[MODE: PRACTICE EXAM. Create 3-5 challenging multiple-choice or analytical exam questions with comprehensive solutions and explanations.]\n\n`;
-      } else if (mode === "STUDY_PLAN") {
-        modeInstruction = `[MODE: STUDY PLAN. Generate a realistic day-by-day revision roadmap with hourly allocations and milestones.]\n\n`;
-      }
-
-      // Convert conversation history to Gemini contents format
-      const formattedContents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-
-      // Include recent history (last 6 messages for context)
-      const recentHistory = history.slice(-6);
-      for (const m of recentHistory) {
-        formattedContents.push({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }],
-        });
-      }
-
-      // Current prompt with instructions
-      formattedContents.push({
-        role: "user",
-        parts: [{ text: `${contextPrefix}${modeInstruction}${prompt}` }],
-      });
-
-      let generatedText: string | null = null;
-      let lastErrorMessage = "";
-      let activeModelUsed = "";
-      let wasFlipped = false;
-
-      // Dynamic model pool prioritizing 3.5 Flash and auto-flipping on traffic buffer / token limits
-      const prioritizedPool = getPrioritizedModelPool();
-
-      for (let i = 0; i < prioritizedPool.length; i++) {
-        const targetModel = prioritizedPool[i];
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: formattedContents,
-              systemInstruction: {
-                parts: [{ text: ACADEMIC_SYSTEM_INSTRUCTION }],
-              },
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2500,
-              },
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              generatedText = text;
-              activeModelUsed = targetModel;
-              wasFlipped = i > 0 || targetModel !== "gemini-3.5-flash";
-              clearModelCooldown(targetModel);
-              break;
-            }
-          } else {
-            const errJson = await response.json().catch(() => ({}));
-            lastErrorMessage = errJson?.error?.message || `HTTP ${response.status}`;
-            console.warn(`Gemini model ${targetModel} status ${response.status}, cascading...`);
-            markModelCooldown(targetModel, response.status, lastErrorMessage);
-          }
-        } catch (mErr: any) {
-          lastErrorMessage = mErr?.message || String(mErr);
-          markModelCooldown(targetModel, 500, lastErrorMessage);
-        }
-      }
-
-      if (!generatedText) {
-        console.warn("All Gemini cascade models unavailable, falling back:", lastErrorMessage);
-        const offlineResult = generateOfflineResponse(prompt, mode, courseContext, enrolledList);
-        return {
-          ...offlineResult,
-          content: `> ⚠️ *Note: Gemini API notice (${lastErrorMessage}). Switched automatically to Built-in Academic Engine:*\n\n${offlineResult.content}`,
-        };
-      }
-
-      if (generatedText) {
-        // If in flashcards mode, extract or attach interactive cards if prompt allows
-        let flashcards: FlashcardItem[] | undefined;
-        let quizQuestions: PracticeQuestionItem[] | undefined;
-
-        if (mode === "FLASHCARDS") {
-          const offlineCards = generateOfflineResponse(prompt, "FLASHCARDS", courseContext, enrolledList).flashcards;
-          flashcards = offlineCards;
-        } else if (mode === "PRACTICE") {
-          const offlineQuizzes = generateOfflineResponse(prompt, "PRACTICE", courseContext, enrolledList).quizQuestions;
-          quizQuestions = offlineQuizzes;
-        }
-
-        return {
-          content: generatedText,
-          modelUsed: activeModelUsed,
-          wasFlipped,
-          flashcards,
-          quizQuestions,
-        };
-      }
-    } catch (err: any) {
-      console.warn("Gemini API network error, falling back to offline engine:", err);
-      const fallback = generateOfflineResponse(prompt, mode, courseContext, enrolledList);
-      return {
-        ...fallback,
-        content: `> ⚠️ *Connection issue with Gemini API (${err?.message || "Network Error"}). Showing answer from Built-in Study Engine:*\n\n${fallback.content}`,
-      };
-    }
-  }
-
-  // ── PATH B: OPENAI API (When Key Provided) ──
-  if (activeConfig.provider === "openai" && activeConfig.apiKey && activeConfig.apiKey.trim()) {
-    try {
-      const apiKey = activeConfig.apiKey.trim();
-      const messages = [
-        { role: "system", content: ACADEMIC_SYSTEM_INSTRUCTION },
-        ...history.slice(-6).map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        { role: "user", content: prompt },
-      ];
-
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      const response = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: activeConfig.modelName || "gpt-4o-mini",
-          messages,
-          temperature: 0.7,
+          prompt,
+          history: history.slice(-6),
+          mode,
+          courseContext,
+          enrolledList,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.choices?.[0]?.message?.content;
-        if (text) {
-          return { content: text };
+      if (response.ok) {
+        const json = await response.json();
+        if (json?.content) {
+          let flashcards: FlashcardItem[] | undefined;
+          let quizQuestions: PracticeQuestionItem[] | undefined;
+
+          if (mode === "FLASHCARDS") {
+            flashcards = generateOfflineResponse(prompt, "FLASHCARDS", courseContext, enrolledList).flashcards;
+          } else if (mode === "PRACTICE") {
+            quizQuestions = generateOfflineResponse(prompt, "PRACTICE", courseContext, enrolledList).quizQuestions;
+          }
+
+          return {
+            content: json.content,
+            modelUsed: json.modelUsed || "gemini-3.5-flash",
+            wasFlipped: Boolean(json.wasFlipped),
+            flashcards,
+            quizQuestions,
+          };
         }
       }
-    } catch (e) {
-      console.warn("OpenAI API call failed, falling back to offline:", e);
+    } catch (proxyErr) {
+      console.warn("Backend AI proxy unreachable, using offline academic engine:", proxyErr);
     }
   }
 
-  // ── PATH C: BUILT-IN OFFLINE ACADEMIC ENGINE (Default & Free) ──
+  // ── PATH B: BUILT-IN OFFLINE ACADEMIC ENGINE (Zero Network / Free Fallback) ──
   return generateOfflineResponse(prompt, mode, courseContext, enrolledList);
 }
