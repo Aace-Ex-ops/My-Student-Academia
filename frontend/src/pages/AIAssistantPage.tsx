@@ -38,13 +38,10 @@ import {
   AIConfig,
   getStoredAIConfig,
   saveStoredAIConfig,
-  clearStoredAIConfig,
-  testCloudAIConnection,
   getStoredChatHistory,
   saveStoredChatHistory,
   clearStoredChatHistory,
   sendAIMessage,
-  DEFAULT_AI_CONFIG,
   getModelPoolHealth,
 } from "@/lib/aiStudyService";
 import { getLocalEnrollments, StoredEnrollment } from "@/lib/enrollmentStorage";
@@ -500,11 +497,7 @@ export function AIAssistantPage({ currentUser }: AIAssistantPageProps) {
   const [aiConfig, setAiConfig] = useState<AIConfig>(getStoredAIConfig());
 
   // Settings form states
-  const [tempApiKey, setTempApiKey] = useState("");
   const [tempProvider, setTempProvider] = useState<"gemini" | "openai" | "groq" | "offline">("gemini");
-  const [showKeyPassword, setShowKeyPassword] = useState(false);
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -515,7 +508,6 @@ export function AIAssistantPage({ currentUser }: AIAssistantPageProps) {
   useEffect(() => {
     const savedConfig = getStoredAIConfig();
     setAiConfig(savedConfig);
-    setTempApiKey(savedConfig.apiKey);
     setTempProvider(savedConfig.provider);
 
     const history = getStoredChatHistory(effectiveEmail);
@@ -670,43 +662,13 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
   const handleSaveSettings = () => {
     const newConfig: AIConfig = {
       provider: tempProvider,
-      apiKey: tempApiKey.trim(),
-      modelName:
-        tempProvider === "gemini"
-          ? "gemini-1.5-flash"
-          : tempProvider === "openai"
-          ? "gpt-4o-mini"
-          : tempProvider === "groq"
-          ? "llama-3.3-70b-versatile"
-          : "offline",
+      apiKey: "",
+      modelName: "gemini-3.5-flash",
     };
 
     saveStoredAIConfig(newConfig);
     setAiConfig(newConfig);
     setShowSettingsModal(false);
-    setTestResult(null);
-  };
-
-  // 8. Test connection
-  const handleTestKey = async () => {
-    setIsTestingKey(true);
-    setTestResult(null);
-    const res = await testCloudAIConnection({
-      provider: tempProvider,
-      apiKey: tempApiKey.trim(),
-      modelName: "gemini-1.5-flash",
-    });
-    setTestResult(res);
-    setIsTestingKey(false);
-  };
-
-  // 9. Revert / Disconnect key
-  const handleDisconnectKey = () => {
-    clearStoredAIConfig();
-    setAiConfig(DEFAULT_AI_CONFIG);
-    setTempApiKey("");
-    setTempProvider("offline");
-    setTestResult({ success: true, message: "Reverted to Built-in Academic Engine." });
   };
 
   // Quick Action Modes
@@ -749,8 +711,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
   ];
 
   const currentModeConfig = MODES.find((m) => m.id === activeMode) || MODES[0];
-  const isCloudConnected =
-    aiConfig.provider !== "offline" && Boolean(aiConfig.apiKey && aiConfig.apiKey.trim());
+  const isGeminiSelected = aiConfig.provider === "gemini";
 
   return (
     <div className="h-full w-full flex flex-col min-h-0 overflow-hidden bg-[#0B0A09] text-[#FAF3E1] select-none">
@@ -781,18 +742,18 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
             <div
               onClick={() => setShowSettingsModal(true)}
               className={`cursor-pointer px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
-                isCloudConnected
+                isGeminiSelected
                   ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:border-emerald-500/80"
                   : "bg-blue-950/40 border-blue-500/40 text-blue-300 hover:border-blue-500/80"
               }`}
             >
               <div
                 className={`w-2 h-2 rounded-full animate-pulse ${
-                  isCloudConnected ? "bg-emerald-400" : "bg-blue-400"
+                  isGeminiSelected ? "bg-emerald-400" : "bg-blue-400"
                 }`}
               />
               <span>
-                {isCloudConnected
+                {isGeminiSelected
                   ? `⚡ Gemini 3.5 Flash Active (+ Auto-Flip Balancer)`
                   : `🧠 Built-in Academic Engine (Free)`}
               </span>
@@ -801,7 +762,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
             <button
               onClick={() => setShowSettingsModal(true)}
               className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-[#1A1921] hover:bg-[#25242E] border border-[#F5E7C6]/20 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              title="Configure AI Model & API Keys"
+              title="Configure AI Model & Study Engine"
             >
               <Settings className="w-4 h-4 text-[#FF6D1F]" />
               <span className="hidden sm:inline">Settings</span>
@@ -1207,12 +1168,12 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#FF6D1F]/20 border border-[#FF6D1F]/40 flex items-center justify-center text-[#FF6D1F]">
-                  <Key className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#FAF3E1]">AI Model & API Key Settings</h3>
+                  <h3 className="text-lg font-bold text-[#FAF3E1]">AI Model & Engine Settings</h3>
                   <p className="text-xs text-slate-400">
-                    Connect an API key for live generative AI or use the built-in offline engine.
+                    Select your preferred AI engine and monitor real-time token load balancing.
                   </p>
                 </div>
               </div>
@@ -1246,7 +1207,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
                     }`}
                   >
                     <div className="font-bold text-sm text-[#60A5FA]">Built-in Engine</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">No API Key / 100% Free</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Offline Academic Engine / Free</div>
                   </button>
                 </div>
               </div>
@@ -1276,104 +1237,22 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
                 </div>
               )}
 
-              {/* API Key Input (if not offline) */}
-              {tempProvider !== "offline" && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      {tempProvider === "gemini" ? "Google Gemini API Key" : "API Key"}
-                    </label>
-                    {tempProvider === "gemini" && (
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-[#FF6D1F] hover:underline flex items-center gap-1 font-semibold"
-                      >
-                        Get Free Key at Google AI Studio <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <input
-                      type={showKeyPassword ? "text" : "password"}
-                      value={tempApiKey}
-                      onChange={(e) => setTempApiKey(e.target.value)}
-                      placeholder="AIzaSy..."
-                      className="w-full rounded-xl border border-[#F5E7C6]/20 bg-[#181822] px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:border-[#FF6D1F] focus:outline-none pr-16"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowKeyPassword(!showKeyPassword)}
-                      className="absolute right-2.5 top-2.5 text-xs font-semibold text-slate-400 hover:text-white"
-                    >
-                      {showKeyPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Keys are saved locally in your browser's secure storage and are never sent to third parties.
-                  </p>
-                </div>
-              )}
-
-              {/* Test Connection Button */}
-              {tempProvider !== "offline" && (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleTestKey}
-                    disabled={isTestingKey || !tempApiKey.trim()}
-                    className="px-3.5 py-2 rounded-xl bg-[#20202A] hover:bg-[#2B2B38] border border-[#F5E7C6]/20 text-xs font-semibold text-slate-200 disabled:opacity-40 flex items-center gap-2 transition-colors"
-                  >
-                    {isTestingKey && <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#FF6D1F]" />}
-                    <span>Test Connection</span>
-                  </button>
-
-                  {testResult && (
-                    <span
-                      className={`text-xs font-semibold flex items-center gap-1.5 ${
-                        testResult.success ? "text-emerald-400" : "text-red-400"
-                      }`}
-                    >
-                      {testResult.success ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <Info className="w-4 h-4" />
-                      )}
-                      <span>{testResult.message}</span>
-                    </span>
-                  )}
-                </div>
-              )}
-
               {/* Modal Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-[#F5E7C6]/15">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#F5E7C6]/15">
                 <button
                   type="button"
-                  onClick={handleDisconnectKey}
-                  className="text-xs text-slate-400 hover:text-red-400 font-semibold"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2 rounded-xl bg-[#1A1922] hover:bg-[#252430] text-xs font-semibold text-slate-300 transition-colors"
                 >
-                  Clear / Disconnect
+                  Cancel
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowSettingsModal(false)}
-                    className="px-4 py-2 rounded-xl bg-[#1A1922] hover:bg-[#252430] text-xs font-semibold text-slate-300 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSettings}
-                    className="px-4 py-2 rounded-xl bg-[#FF6D1F] hover:bg-[#E05615] text-xs font-bold text-white shadow-md shadow-[#FF6D1F]/30 transition-colors"
-                  >
-                    Save & Apply
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  className="px-4 py-2 rounded-xl bg-[#FF6D1F] hover:bg-[#E05615] text-xs font-bold text-white shadow-md shadow-[#FF6D1F]/30 transition-colors"
+                >
+                  Save & Apply
+                </button>
               </div>
             </motion.div>
           </div>

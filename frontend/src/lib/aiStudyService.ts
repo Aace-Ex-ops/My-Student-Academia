@@ -654,7 +654,7 @@ function generateOfflineResponse(
     response += `- 🗂️ **Active Recall Flashcards**: Ask me to turn any concept into study cards.\n`;
     response += `- 🎯 **Exam Prep & Problem Walkthroughs**: Get step-by-step mathematical proofs, algorithm traces, and code explanations.\n`;
     response += `- 📅 **Personalized Study Plans**: Build a balanced study timetable around your enrolled courses.\n\n`;
-    response += `> **Pro-Tip**: Connect your **Google Gemini API Key** (free at [Google AI Studio](https://aistudio.google.com/app/apikey)) via the **Settings (⚙️)** button above to enable full live generative AI reasoning!`;
+    response += `Select a study mode from the toolbar or ask any question to get started!`;
   }
 
   return { content: response };
