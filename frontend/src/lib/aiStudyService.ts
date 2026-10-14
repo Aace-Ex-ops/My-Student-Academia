@@ -145,38 +145,26 @@ export function getPrioritizedModelPool(): string[] {
   return [...new Set([...pool, ...cooldown, ...GEMINI_CASCADE_MODELS])];
 }
 
-const ENV_GEMINI_KEY = ((import.meta as any).env?.VITE_GEMINI_API_KEY || "").trim();
-
-// Default configurations
+// Default configurations (offline built-in engine; keys are only stored in the user's private browser localStorage)
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  provider: ENV_GEMINI_KEY ? "gemini" : "offline",
-  apiKey: ENV_GEMINI_KEY,
+  provider: "offline",
+  apiKey: "",
   modelName: "gemini-3.5-flash",
 };
 
 // ✦ 1. CONFIGURATION STORAGE & RETRIEVAL ✦
 export function getStoredAIConfig(): AIConfig {
   try {
-    // 1. Check local storage
     const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         return {
-          provider: parsed.provider || (ENV_GEMINI_KEY ? "gemini" : "offline"),
-          apiKey: parsed.apiKey || ENV_GEMINI_KEY,
-          modelName: parsed.modelName || "gemini-3.1-flash-lite",
+          provider: parsed.provider || "offline",
+          apiKey: (parsed.apiKey || "").trim(),
+          modelName: parsed.modelName || "gemini-3.5-flash",
         };
       }
-    }
-
-    // 2. Fallback to Vite environment variable if configured during build/deployment
-    if (ENV_GEMINI_KEY) {
-      return {
-        provider: "gemini",
-        apiKey: ENV_GEMINI_KEY,
-        modelName: "gemini-3.1-flash-lite",
-      };
     }
   } catch (e) {
     console.warn("Failed to retrieve AI configuration:", e);

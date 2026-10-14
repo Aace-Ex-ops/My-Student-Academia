@@ -536,7 +536,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
 - 🎯 **Test Your Knowledge**: Generate high-yield practice questions with instant grading.
 - 📅 **Build a Study Plan**: Create a 7-day revision schedule tailored to your enrolled courses.
 
-> **⚡ Live Google Gemini AI Enabled**: Powered by Google Gemini with real-time academic intelligence, lecture notes summarization, flashcard generation, and curriculum grounding. Ask any question or paste your study notes below!`,
+> **⚡ Academic Intelligence Ready**: Instant lecture notes summarization, flashcard generation, and exam prep. You can also connect your own Google Gemini API Key in **Settings** for live AI inference! Ask any question or paste your study notes below!`,
         timestamp: Date.now(),
         mode: "CHAT",
       };
