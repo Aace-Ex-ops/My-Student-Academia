@@ -1,5 +1,4 @@
-// Centralized Persistent Enrollment Manager
-// Guarantees 100% enrollment state sync across LocalStorage, Backend API, and Cloudflare Pages
+import { EXPANDED_COURSE_CATALOG } from "./courseCatalogData";
 
 export interface StoredEnrollment {
   id: string;
@@ -19,7 +18,9 @@ export interface StoredEnrollment {
     };
     instructor?: {
       name: string;
-    };
+      title?: string;
+      avatar?: string;
+    } | string;
     slots?: Array<{
       day: string;
       startTime: string;
@@ -64,6 +65,20 @@ export function saveLocalEnrollment(userIdOrEmail: string, course: any): StoredE
 
   if (alreadyExists) return alreadyExists;
 
+  // Resolve authentic instructor who was shown on the course card
+  let resolvedInstructor = course.instructor;
+  if (!resolvedInstructor || resolvedInstructor === "Faculty Assigned" || resolvedInstructor?.name === "Faculty Assigned") {
+    const codeClean = (course.code || course.id || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const catalogMatch = EXPANDED_COURSE_CATALOG.find((c) => {
+      const cCode = c.code.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      const cId = c.id.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      return (codeClean && (cCode === codeClean || cId === codeClean)) || (course.title && c.title.toLowerCase() === course.title.toLowerCase());
+    });
+    if (catalogMatch?.instructor) {
+      resolvedInstructor = catalogMatch.instructor;
+    }
+  }
+
   const newEnrollment: StoredEnrollment = {
     id: `enroll-${course.id || course.code}-${Date.now()}`,
     status: "ENROLLED",
@@ -80,7 +95,7 @@ export function saveLocalEnrollment(userIdOrEmail: string, course: any): StoredE
         credits: course.credits || 4,
         description: course.description || `Comprehensive study of ${course.title}.`,
       },
-      instructor: course.instructor || { name: "Faculty Assigned" },
+      instructor: resolvedInstructor || { name: "Faculty Assigned" },
       slots: [
         {
           day: course.days || "Mon, Wed, Fri",

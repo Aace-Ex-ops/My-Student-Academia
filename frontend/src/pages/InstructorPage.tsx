@@ -19,38 +19,36 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const starRef = useRef<HTMLSpanElement>(null);
 
-  const isInstructor = currentUser?.role === "INSTRUCTOR" || currentUser?.role === "faculty";
+  const effectiveUser = currentUser || (() => {
+    try {
+      const saved = localStorage.getItem("msa_custom_user_profile");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  })();
+
+  const isInstructor = effectiveUser?.role === "INSTRUCTOR" || effectiveUser?.role === "faculty";
 
   const fetchStudentFacultyData = async () => {
     try {
       setLoading(true);
+
+      if (!effectiveUser) {
+        setStudentFaculty([]);
+        return;
+      }
       
-      // 1. Gather from local storage for current user ID & email
-      let localEnrId = getLocalEnrollments(currentUser?.id);
-      let localEnrEmail = getLocalEnrollments(currentUser?.email);
+      // 1. Gather ONLY from local storage for effective user ID & email (strictly scoped to this account)
+      const localEnrId = effectiveUser?.id ? getLocalEnrollments(effectiveUser.id) : [];
+      const localEnrEmail = effectiveUser?.email ? getLocalEnrollments(effectiveUser.email) : [];
       let allEnrollments: any[] = [...localEnrId, ...localEnrEmail];
 
-      // 2. Scan all storage keys as aggressive fallback
-      try {
-        const raw = localStorage.getItem("msa_user_enrollments_registry");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            allEnrollments = [...allEnrollments, ...parsed];
-          } else if (typeof parsed === 'object') {
-            Object.values(parsed).forEach((arr: any) => {
-              if (Array.isArray(arr)) allEnrollments = [...allEnrollments, ...arr];
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(e);
-      }
-
-      // 3. Remote API fetch if currentUser has an ID
-      if (currentUser?.id) {
+      // 2. Remote API fetch if effectiveUser has an ID
+      if (effectiveUser?.id) {
         try {
-          const res = await fetch(`/api/registration/student/${currentUser.id}`);
+          const res = await fetch(`/api/registration/student/${effectiveUser.id}`);
           if (res.ok) {
             const json = await res.json();
             if (json.enrollments && Array.isArray(json.enrollments)) {
@@ -60,6 +58,12 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
         } catch (e) {
           console.warn("Backend student fetch notice:", e);
         }
+      }
+
+      // If user has zero enrollments, strictly show empty state
+      if (allEnrollments.length === 0) {
+        setStudentFaculty([]);
+        return;
       }
 
       // Deduplicate enrollments by course code or id
@@ -72,17 +76,20 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
       });
 
       const enrollmentsToProcess = Array.from(uniqueEnrollments.values());
-
       const facultyMap = new Map();
 
       enrollmentsToProcess.forEach((e: any, idx: number) => {
         let course = e?.section?.course || e?.course || (e?.code ? e : null) || { code: e?.id || `C-${idx}`, title: "Enrolled Course" };
-        let courseCode = course.code || course.id || "";
+        const courseCode = (course.code || course.id || "").toString();
+        const cleanCourseCode = courseCode.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
         
-        // Find matching course from EXPANDED_COURSE_CATALOG for rich details if available
-        const catalogMatch = EXPANDED_COURSE_CATALOG.find(
-          (c) => c.code.toLowerCase() === courseCode.toLowerCase() || c.id.toLowerCase() === courseCode.toLowerCase()
-        );
+        // Find matching course from EXPANDED_COURSE_CATALOG for authentic instructor details
+        const catalogMatch = EXPANDED_COURSE_CATALOG.find((c) => {
+          const cCodeClean = c.code.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          const cIdClean = c.id.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          return (cleanCourseCode && (cCodeClean === cleanCourseCode || cIdClean === cleanCourseCode)) ||
+            (course.title && c.title.toLowerCase() === course.title.toLowerCase());
+        });
 
         if (catalogMatch) {
           course = { ...catalogMatch, ...course };
@@ -90,25 +97,29 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
 
         let instructor = e?.section?.instructor || e?.instructor || course?.instructor || catalogMatch?.instructor;
 
-        let instructorName = "Faculty Member";
+        let instructorName = "";
         let title = "Professor";
         let avatar = "";
 
-        if (typeof instructor === "string" && instructor.trim() && instructor !== "Faculty Assigned") {
-          instructorName = instructor;
+        if (typeof instructor === "string" && instructor.trim() && instructor !== "Faculty Assigned" && instructor !== "Faculty Member") {
+          instructorName = instructor.trim();
         } else if (instructor && typeof instructor === "object") {
-          if (instructor.name && instructor.name !== "Faculty Assigned") {
-            instructorName = instructor.name;
+          if (instructor.name && instructor.name !== "Faculty Assigned" && instructor.name !== "Faculty Member") {
+            instructorName = instructor.name.trim();
           }
           if (instructor.title) title = instructor.title;
           if (instructor.avatar) avatar = instructor.avatar;
         }
 
-        // Fallback to catalog match instructor if name is generic
-        if ((instructorName === "Faculty Member" || instructorName === "Faculty Assigned") && catalogMatch?.instructor) {
+        // Fallback to catalog match instructor if name is generic or missing
+        if ((!instructorName || instructorName === "Faculty Member" || instructorName === "Faculty Assigned") && catalogMatch?.instructor) {
           instructorName = catalogMatch.instructor.name || instructorName;
           title = catalogMatch.instructor.title || title;
           avatar = catalogMatch.instructor.avatar || avatar;
+        }
+
+        if (!instructorName || instructorName === "Faculty Assigned") {
+          instructorName = "Course Instructor";
         }
 
         if (!facultyMap.has(instructorName)) {
@@ -120,7 +131,7 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
           });
         } else {
           const existing = facultyMap.get(instructorName);
-          if (!existing.courses.find((c: any) => c.code === course.code)) {
+          if (!existing.courses.find((c: any) => (c.code || c.id) === (course.code || course.id))) {
             existing.courses.push(course);
           }
         }
@@ -129,6 +140,7 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
       setStudentFaculty(Array.from(facultyMap.values()));
     } catch (err) {
       console.error("Failed to load student faculty data:", err);
+      setStudentFaculty([]);
     } finally {
       setLoading(false);
     }
@@ -145,7 +157,12 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
   const fetchInstructorData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/instructor/${currentUser?.id}/sections`);
+      const instructorId = effectiveUser?.id;
+      if (!instructorId) {
+        setSections([]);
+        return;
+      }
+      const res = await fetch(`/api/admin/instructor/${instructorId}/sections`);
       if (res.ok) {
         const json = await res.json();
         setSections(json);
