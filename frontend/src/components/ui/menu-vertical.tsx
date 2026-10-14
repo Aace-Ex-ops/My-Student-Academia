@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   MessageSquare,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { User } from "@/types";
@@ -53,6 +54,11 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
       label: "Faculty Messages",
       path: "/messages",
       icon: MessageSquare,
+    },
+    {
+      label: "Quizzes",
+      path: "/quizzes",
+      icon: CheckSquare,
     },
   ];
 

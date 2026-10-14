@@ -41,6 +41,7 @@ import { CourseMaterialsModal } from "@/components/ui/CourseMaterialsModal";
 import { StudyDocumentReaderModal } from "@/components/ui/StudyDocumentReaderModal";
 import { StudyMaterialLockedModal } from "@/components/ui/StudyMaterialLockedModal";
 import { bruteForcePurgeAllUserData } from "@/lib/accountPurge";
+import { calculateAcademicStanding } from "@/lib/quizStorage";
 
 interface StudentDashboardProps {
   currentUser?: User | null;
@@ -64,6 +65,22 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   // Delete Account State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Dynamic Academic Standing evaluated from Quizzes
+  const userIdentifier = currentUser?.id || currentUser?.email || "guest";
+  const [academicStanding, setAcademicStanding] = useState(() => calculateAcademicStanding(userIdentifier));
+
+  useEffect(() => {
+    const updateStanding = () => {
+      setAcademicStanding(calculateAcademicStanding(userIdentifier));
+    };
+    window.addEventListener("storage", updateStanding);
+    window.addEventListener("msa_quiz_updated", updateStanding);
+    return () => {
+      window.removeEventListener("storage", updateStanding);
+      window.removeEventListener("msa_quiz_updated", updateStanding);
+    };
+  }, [userIdentifier]);
 
   // GSAP DOM Animation Refs
   const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -200,7 +217,7 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
       if (gpaCounterRef.current) {
         const obj = { val: 0 };
         gsap.to(obj, {
-          val: 3.88,
+          val: academicStanding.gpa,
           duration: 1.4,
           delay: 0.25,
           ease: "power2.out",
@@ -504,18 +521,21 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span ref={gpaCounterRef} className="text-3xl font-black text-emerald-400">
-                  3.88
+                  {academicStanding.gpa.toFixed(2)}
                 </span>
                 <span className="text-sm font-extrabold text-[#FAF3E1]/50">/ 4.00</span>
               </div>
               <div className="inline-flex items-center gap-1 mt-2 text-xs font-black text-emerald-300 bg-emerald-950/70 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                <Sparkles className="w-3 h-3 text-emerald-400" /> Dean's Honor Roll
+                <Sparkles className="w-3 h-3 text-emerald-400" /> {academicStanding.honorTitle}
               </div>
             </div>
 
-            <span className="text-[11px] font-bold text-[#FAF3E1]/60 mt-2.5">
-              Top 5% of Department
-            </span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-[#FAF3E1]/60 mt-2.5">
+              <span>{academicStanding.cohortPercentile}</span>
+              <Link to="/quizzes" className="text-[#FF6D1F] hover:underline font-black text-[10px] ml-1">
+                Quizzes →
+              </Link>
+            </div>
           </div>
 
           {/* KPI 3: Weekly Online Class Hours */}

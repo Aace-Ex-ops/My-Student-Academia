@@ -16,7 +16,9 @@ import {
   Video,
 } from "lucide-react";
 import { User } from "@/types";
+import { Link } from "react-router-dom";
 import { getLocalEnrollments } from "@/lib/enrollmentStorage";
+import { calculateAcademicStanding } from "@/lib/quizStorage";
 
 interface PerformancePageProps {
   currentUser?: User | null;
@@ -30,6 +32,19 @@ export function PerformancePage({ currentUser }: PerformancePageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const kpiRowRef = useRef<HTMLDivElement>(null);
   const starRef = useRef<HTMLSpanElement>(null);
+
+  const userIdentifier = currentUser?.id || currentUser?.email || "guest";
+  const [academicStanding, setAcademicStanding] = useState(() => calculateAcademicStanding(userIdentifier));
+
+  useEffect(() => {
+    const updateStanding = () => setAcademicStanding(calculateAcademicStanding(userIdentifier));
+    window.addEventListener("storage", updateStanding);
+    window.addEventListener("msa_quiz_updated", updateStanding);
+    return () => {
+      window.removeEventListener("storage", updateStanding);
+      window.removeEventListener("msa_quiz_updated", updateStanding);
+    };
+  }, [userIdentifier]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -224,12 +239,17 @@ export function PerformancePage({ currentUser }: PerformancePageProps) {
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-emerald-400">3.88</span>
+              <span className="text-3xl font-black text-emerald-400">
+                {academicStanding.gpa.toFixed(2)}
+              </span>
               <span className="text-xs font-extrabold text-[#FAF3E1]/50">/ 4.00</span>
             </div>
-            <span className="text-[11px] font-bold text-emerald-300 block">
-              Dean's Honor Roll • Top 5%
-            </span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-emerald-300">
+              <span className="truncate">{academicStanding.honorTitle}</span>
+              <Link to="/quizzes" className="text-[#FF6D1F] hover:underline font-black text-[10px] ml-1 flex-shrink-0">
+                Quizzes →
+              </Link>
+            </div>
           </div>
 
           {/* Card 3: Consistency Score */}
