@@ -385,6 +385,32 @@ export function PortalAuthPage({ currentUser, onLoginUser }: PortalAuthPageProps
                       1-Click Login →
                     </span>
                   </button>
+
+                  {/* Direct Admin Dashboard Access Shortcut from Faculty Portal */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => executeLogin(ADMIN_DEMO_ACCOUNTS[0])}
+                      className="w-full p-2.5 rounded-xl bg-gradient-to-r from-blue-950/60 via-indigo-950/40 to-blue-950/60 hover:from-blue-900/60 hover:to-indigo-900/60 border border-blue-500/40 text-left transition-all flex items-center justify-between group cursor-pointer shadow-md"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shrink-0">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-white group-hover:text-blue-300 transition-colors">
+                            Enter Admin Dashboard Directly
+                          </div>
+                          <div className="text-[10px] text-blue-200/60 truncate">
+                            Dean & Registrar Central Console
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-blue-300 px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/30 shrink-0">
+                        Open Admin →
+                      </span>
+                    </button>
+                  </div>
                 </>
               ) : (
                 <button

@@ -23,6 +23,7 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { User } from "@/types";
 import { getLocalEnrollments } from "@/lib/enrollmentStorage";
@@ -410,11 +411,35 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
             </p>
           </div>
 
-          {/* Instructor Live Status Toggle / Student Badge */}
+          {/* Instructor Actions & Status */}
           {isInstructor ? (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-[#1A1A22] border border-[#F5E7C6]/15 p-2 rounded-2xl shadow-md">
-              <span className="text-xs text-[#FAF3E1]/70 px-2 font-bold">Office Hours:</span>
-              <div className="flex items-center gap-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <button
+                onClick={() => {
+                  const adminUser: User = {
+                    id: "admin-central-01",
+                    name: "Dean of Academic Operations",
+                    email: "registrar@admin.academia.edu",
+                    role: "ADMIN",
+                    major: "Institutional Governance & Operations",
+                    university: "Indian Institute of Technology (IIT) Kharagpur",
+                    avatar: "Astronaut",
+                    avatarIcon: "🏛️",
+                    avatarBg: "from-blue-700 to-indigo-900",
+                  };
+                  localStorage.setItem("msa_custom_user_profile", JSON.stringify(adminUser));
+                  navigate("/admin");
+                }}
+                className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 flex items-center gap-2 cursor-pointer active:scale-95"
+                title="Switch to Institutional Administrator Console"
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Admin Console</span>
+              </button>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-[#1A1A22] border border-[#F5E7C6]/15 p-2 rounded-2xl shadow-md">
+                <span className="text-xs text-[#FAF3E1]/70 px-2 font-bold">Office Hours:</span>
+                <div className="flex items-center gap-1">
                 <button
                   onClick={() => setOfficeHoursStatus("AVAILABLE")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -452,6 +477,7 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
                 </button>
               </div>
             </div>
+          </div>
           ) : (
             <div className="flex items-center gap-3 bg-[#1A1A22] border border-[#F5E7C6]/15 px-5 py-3 rounded-2xl shadow-md">
               <BookOpen className="w-5 h-5 text-[#FF6D1F]" />

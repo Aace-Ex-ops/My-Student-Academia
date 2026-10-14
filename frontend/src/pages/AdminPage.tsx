@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   Plus,
@@ -20,6 +21,7 @@ import {
   Layers,
   ChevronRight,
   UserCheck,
+  GraduationCap,
 } from "lucide-react";
 import { User } from "@/types";
 import { EXPANDED_COURSE_CATALOG } from "@/lib/courseCatalogData";
@@ -49,6 +51,7 @@ interface AuditLogItem {
 }
 
 export function AdminPage({ currentUser }: AdminPageProps) {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<any>({
     totalStudents: 1480,
     totalCourses: 33,
@@ -361,34 +364,60 @@ export function AdminPage({ currentUser }: AdminPageProps) {
             </p>
           </div>
 
-          {/* Registration Engine Status Toggle */}
-          <div className="flex items-center gap-4 bg-[#1A1A22] border border-white/10 p-3 rounded-2xl shadow-md">
-            <div className="text-right">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Registration Portal</span>
-              <span className={`text-xs font-bold ${isRegistrationOpen ? "text-emerald-400" : "text-amber-400"}`}>
-                {isRegistrationOpen ? "Open for Enrollments" : "Locked / Census Mode"}
-              </span>
-            </div>
-
+          {/* Admin Header Action Controls */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <button
               onClick={() => {
-                setIsRegistrationOpen(!isRegistrationOpen);
-                setToastMessage(
-                  isRegistrationOpen
-                    ? "Registration engine locked. Students cannot modify enrollments."
-                    : "Registration engine opened. Course enrollment is live."
-                );
-                setTimeout(() => setToastMessage(null), 3000);
+                const facultyUser: User = {
+                  id: "faculty-sethi-01",
+                  name: "Dr. Vikram Sethi",
+                  email: "vikram.sethi@faculty.academia.edu",
+                  role: "INSTRUCTOR",
+                  major: "Computer Science & Artificial Intelligence",
+                  university: "Indian Institute of Technology (IIT) Kharagpur",
+                  avatar: "Researcher",
+                  avatarIcon: "🔬",
+                  avatarBg: "from-amber-600 to-orange-700",
+                };
+                localStorage.setItem("msa_custom_user_profile", JSON.stringify(facultyUser));
+                navigate("/instructor");
               }}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${
-                isRegistrationOpen
-                  ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                  : "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-              }`}
-              title="Toggle Registration Open / Closed"
+              className="px-4 py-2.5 rounded-2xl bg-[#FF6D1F] hover:bg-[#e65c10] text-white text-xs font-bold transition-all shadow-md shadow-[#FF6D1F]/30 flex items-center gap-2 cursor-pointer active:scale-95"
+              title="Switch to Faculty & Instructor Academic Portal"
             >
-              {isRegistrationOpen ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+              <GraduationCap className="w-4 h-4" />
+              <span>Faculty Portal</span>
             </button>
+
+            {/* Registration Engine Status Toggle */}
+            <div className="flex items-center gap-4 bg-[#1A1A22] border border-white/10 p-3 rounded-2xl shadow-md">
+              <div className="text-right">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Registration Portal</span>
+                <span className={`text-xs font-bold ${isRegistrationOpen ? "text-emerald-400" : "text-amber-400"}`}>
+                  {isRegistrationOpen ? "Open for Enrollments" : "Locked / Census Mode"}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsRegistrationOpen(!isRegistrationOpen);
+                  setToastMessage(
+                    isRegistrationOpen
+                      ? "Registration engine locked. Students cannot modify enrollments."
+                      : "Registration engine opened. Course enrollment is live."
+                  );
+                  setTimeout(() => setToastMessage(null), 3000);
+                }}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  isRegistrationOpen
+                    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                    : "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                }`}
+                title="Toggle Registration Open / Closed"
+              >
+                {isRegistrationOpen ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
 
