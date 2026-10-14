@@ -25,6 +25,8 @@ import {
   Flame,
   Award,
   Filter,
+  FileText,
+  Lock,
 } from "lucide-react";
 import { User } from "@/types";
 import { AlreadyRegisteredRobotModal } from "@/components/ui/AlreadyRegisteredRobotModal";
@@ -39,6 +41,10 @@ import {
   StreamMatchLevel,
   STREAM_ADJACENCY_MAP,
 } from "@/lib/courseCatalogData";
+import { CourseDocument } from "@/lib/courseMaterialsData";
+import { CourseMaterialsModal } from "@/components/ui/CourseMaterialsModal";
+import { StudyDocumentReaderModal } from "@/components/ui/StudyDocumentReaderModal";
+import { StudyMaterialLockedModal } from "@/components/ui/StudyMaterialLockedModal";
 
 interface CatalogPageProps {
   currentUser?: User | null;
@@ -119,6 +125,12 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
   const [registeredCourseCodes, setRegisteredCourseCodes] = useState<Set<string>>(new Set());
   const [robotModalOpen, setRobotModalOpen] = useState<boolean>(false);
   const [selectedRegisteredCourse, setSelectedRegisteredCourse] = useState<any>(null);
+
+  // Study Materials State
+  const [selectedMaterialsCourse, setSelectedMaterialsCourse] = useState<CourseCatalogItem | null>(null);
+  const [activeDocToRead, setActiveDocToRead] = useState<CourseDocument | null>(null);
+  const [isDocReaderOpen, setIsDocReaderOpen] = useState<boolean>(false);
+  const [lockedModalCourse, setLockedModalCourse] = useState<CourseCatalogItem | null>(null);
 
   // Animation Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -683,6 +695,35 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
                       </div>
                     </div>
 
+                    {/* Course Study Materials Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isRegistered) {
+                          setSelectedMaterialsCourse(course);
+                        } else {
+                          setLockedModalCourse(course);
+                        }
+                      }}
+                      className={`w-full py-2 px-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isRegistered
+                          ? "bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/30"
+                          : "bg-white/5 hover:bg-white/10 text-[#FAF3E1]/70 hover:text-[#FAF3E1] border border-white/10"
+                      }`}
+                    >
+                      {isRegistered ? (
+                        <>
+                          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Study Materials (4 Docs Unlocked ✓)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Study Materials (Locked 🔒 - Enroll to Access)</span>
+                        </>
+                      )}
+                    </button>
+
                     {/* Action Buttons: 1-Click Register vs Registered Robot Modal */}
                     <div className="pt-2 flex items-center gap-2">
                       <button
@@ -728,6 +769,40 @@ export function CatalogPage({ currentUser }: CatalogPageProps) {
         )}
 
       </div>
+
+      {/* ✦ COURSE STUDY MATERIALS MODAL ✦ */}
+      {selectedMaterialsCourse && (
+        <CourseMaterialsModal
+          isOpen={!!selectedMaterialsCourse}
+          onClose={() => setSelectedMaterialsCourse(null)}
+          courseCode={selectedMaterialsCourse.code}
+          courseTitle={selectedMaterialsCourse.title}
+          isEnrolled={true}
+          onReadDocument={(doc) => {
+            setActiveDocToRead(doc);
+            setIsDocReaderOpen(true);
+          }}
+        />
+      )}
+
+      {/* ✦ STUDY DOCUMENT READER MODAL ✦ */}
+      <StudyDocumentReaderModal
+        isOpen={isDocReaderOpen}
+        onClose={() => setIsDocReaderOpen(false)}
+        document={activeDocToRead}
+      />
+
+      {/* ✦ ACCESS LOCKED MODAL ✦ */}
+      {lockedModalCourse && (
+        <StudyMaterialLockedModal
+          isOpen={!!lockedModalCourse}
+          onClose={() => setLockedModalCourse(null)}
+          courseCode={lockedModalCourse.code}
+          courseTitle={lockedModalCourse.title}
+          onEnrollNow={() => handleQuickRegister(lockedModalCourse)}
+        />
+      )}
+
     </div>
   );
 }
