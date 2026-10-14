@@ -70,7 +70,6 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   const spotlightRef = useRef<HTMLDivElement>(null);
   const headerCardRef = useRef<HTMLDivElement>(null);
   const kpiRowRef = useRef<HTMLDivElement>(null);
-  const nextClassRef = useRef<HTMLDivElement>(null);
   const enrolledGridRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -332,9 +331,6 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   const maxCredits = 18;
   const creditPercent = Math.min(100, Math.round((totalCredits / maxCredits) * 100));
 
-  // Get first active course for "Next Upcoming Online Class" widget
-  const firstActiveEnrollment = enrollments.length > 0 ? enrollments[0] : null;
-
   return (
     <div
       ref={pageContainerRef}
@@ -544,7 +540,7 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
             </div>
 
             <span className="text-[11px] font-bold text-[#FAF3E1]/60 mt-2.5">
-              Self-Paced & Live Lectures
+              Self-Paced Academic Modules
             </span>
           </div>
 
@@ -587,41 +583,6 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
           <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-sm flex items-center gap-3 font-bold shadow-lg animate-in fade-in slide-in-from-top-2">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-400" />
             <span>{dropMessage}</span>
-          </div>
-        )}
-
-        {/* 3. "NEXT UPCOMING ONLINE CLASS" TODAY AGENDA BANNER */}
-        {firstActiveEnrollment && (
-          <div
-            ref={nextClassRef}
-            className="bg-gradient-to-r from-[#16161E] via-[#1E1E28] to-[#16161E] text-[#FAF3E1] p-6 rounded-3xl border border-[#FF6D1F]/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-[#FF6D1F]/60"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#FF6D1F]/20 border border-[#FF6D1F]/40 flex items-center justify-center text-[#FF6D1F] flex-shrink-0 shadow-lg shadow-[#FF6D1F]/20">
-                <Video className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-2 text-[11px] font-mono text-[#FF6D1F] font-black uppercase tracking-wider mb-1">
-                  <span>// NEXT LIVE SESSION</span>
-                  <span>•</span>
-                  <span>{firstActiveEnrollment.section.slots?.[0]?.day || "Mon"} {firstActiveEnrollment.section.slots?.[0]?.startTime || "10:00 AM"}</span>
-                </div>
-                <h3 className="text-lg font-black text-[#FAF3E1]">
-                  {firstActiveEnrollment.section.course.code}: {firstActiveEnrollment.section.course.title}
-                </h3>
-                <p className="text-xs text-[#FAF3E1]/70 mt-0.5">
-                  Instructor: <span className="text-[#FAF3E1] font-bold">{firstActiveEnrollment.section.instructor?.name || "Faculty Assigned"}</span> • Mode: <span className="text-[#FF6D1F] font-bold">100% Online Interactive Lecture</span>
-                </p>
-              </div>
-            </div>
-
-            <Link
-              to="/catalog"
-              className="px-5 py-2.5 rounded-xl bg-[#FF6D1F] hover:bg-[#e65c10] text-[#FAF3E1] text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#FF6D1F]/30 active:scale-95 self-start md:self-auto cursor-pointer"
-            >
-              <span>Explore Course Modules</span>
-              <ArrowUpRight className="w-4 h-4 text-[#FAF3E1]" />
-            </Link>
           </div>
         )}
 
