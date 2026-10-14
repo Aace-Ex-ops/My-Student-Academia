@@ -19,6 +19,15 @@ export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
+      // ✦ AUTOMATIC BRUTE-FORCE PURGE OF ALL LEGACY ACCOUNTS ✦
+      if (localStorage.getItem('msa_app_version') !== 'v2_clean_slate') {
+        localStorage.removeItem('msa_custom_user_profile');
+        localStorage.removeItem('msa_registered_accounts_registry');
+        localStorage.removeItem('msa_user_enrollments_registry');
+        localStorage.removeItem('msa_waitlists_registry');
+        localStorage.setItem('msa_app_version', 'v2_clean_slate');
+        return null;
+      }
       const saved = localStorage.getItem('msa_custom_user_profile');
       if (saved) return JSON.parse(saved);
     } catch (e) {
@@ -30,6 +39,16 @@ export function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
+    // ✦ AUTO-WIPE LEGACY ACCOUNTS ACROSS REGISTRIES & BACKEND ✦
+    if (localStorage.getItem('msa_legacy_accounts_wiped') !== 'true') {
+      bruteForcePurgeAllUserData(undefined, true).then(() => {
+        localStorage.setItem('msa_app_version', 'v2_clean_slate');
+        localStorage.setItem('msa_legacy_accounts_wiped', 'true');
+        setCurrentUser(null);
+      });
+      return;
+    }
+
     // ✦ INSTANT BRUTE-FORCE URL PURGE TRIGGER ✦
     // Allows instant wipe via: https://my-student-academia.pages.dev/?action=wipe-account or ?reset=true
     const params = new URLSearchParams(window.location.search);
@@ -40,6 +59,8 @@ export function AppContent() {
       params.get('clear') === 'true'
     ) {
       bruteForcePurgeAllUserData(undefined, true).then(() => {
+        localStorage.setItem('msa_app_version', 'v2_clean_slate');
+        localStorage.setItem('msa_legacy_accounts_wiped', 'true');
         setCurrentUser(null);
         window.history.replaceState({}, document.title, window.location.pathname);
         navigate('/auth?purged=true', { replace: true });
