@@ -12,6 +12,7 @@ import { PerformancePage } from './pages/PerformancePage';
 import { InstructorPage } from './pages/InstructorPage';
 import { FacultyChatPage } from './pages/FacultyChatPage';
 import { QuizzesPage } from './pages/QuizzesPage';
+import { AIAssistantPage } from './pages/AIAssistantPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 import { apiFetch } from './lib/api';
@@ -169,6 +170,7 @@ export function AppContent() {
             <Route path="/instructor" element={<InstructorPage currentUser={currentUser} />} />
             <Route path="/messages" element={<FacultyChatPage currentUser={currentUser} />} />
             <Route path="/quizzes" element={<QuizzesPage currentUser={currentUser} />} />
+            <Route path="/ai-assistant" element={<AIAssistantPage currentUser={currentUser} />} />
             <Route path="/admin" element={<AdminPage currentUser={currentUser} />} />
           </Routes>
         </div>
