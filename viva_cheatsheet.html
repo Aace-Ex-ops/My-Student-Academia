@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Student Academia - Exam & Viva Ready Summary Cheatsheet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm 12mm 14mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1e293b;
+    background-color: #ffffff;
+    font-size: 8.5pt;
+    line-height: 1.45;
+  }
+
+  /* Header Bar */
+  .header-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%);
+    color: #ffffff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  }
+
+  .header-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-title-row h1 {
+    font-size: 17pt;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+  }
+
+  .header-badge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 3px 9px;
+    border-radius: 9999px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .header-subtitle {
+    font-size: 9.5pt;
+    color: #94a3b8;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  .header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 7.8pt;
+    color: #cbd5e1;
+  }
+
+  .meta-item strong {
+    color: #38bdf8;
+  }
+
+  /* Section Styling */
+  .section {
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+  }
+
+  .section-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 2px solid #0d9488;
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .section-title span.num {
+    background: #0d9488;
+    color: #ffffff;
+    font-size: 7pt;
+    width: 17px;
+    height: 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+
+  /* Grid Layouts */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Card */
+  .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .card-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .card-title.blue { color: #0284c7; }
+  .card-title.teal { color: #0d9488; }
+  .card-title.purple { color: #7c3aed; }
+  .card-title.amber { color: #d97706; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.8pt;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 4px 6px;
+    font-size: 7.5pt;
+  }
+
+  td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  /* Code / Monospace */
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    background: #e2e8f0;
+    color: #0f172a;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 7.2pt;
+    font-weight: 500;
+  }
+
+  /* Badges */
+  .tag {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 6.8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .tag-green { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .tag-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+  .tag-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .tag-red { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  /* Lists */
+  ul, ol {
+    margin-left: 14px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+  }
+
+  li {
+    margin-bottom: 2px;
+  }
+
+  /* Viva Q&A styling */
+  .qa-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-left: 3px solid #0d9488;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    page-break-inside: avoid;
+  }
+
+  .qa-question {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 8.2pt;
+    margin-bottom: 2px;
+  }
+
+  .qa-answer {
+    color: #334155;
+    font-size: 7.8pt;
+  }
+
+  .qa-answer strong {
+    color: #0f766e;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .architecture-box {
+    background: #f1f5f9;
+    border: 1px dashed #94a3b8;
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0;
+  }
+
+  .arch-tier {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    padding: 6px 8px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .arch-tier h4 {
+    font-size: 8pt;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+
+  .arch-tier p {
+    font-size: 7pt;
+    color: #64748b;
+  }
+
+  .arch-arrow {
+    font-size: 9pt;
+    color: #0d9488;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header Card -->
+<div class="header-card">
+  <div class="header-title-row">
+    <div>
+      <h1>🎓 My Student Academia (MSA)</h1>
+      <div class="header-subtitle">Comprehensive Software Engineering & System Architecture Cheatsheet</div>
+    </div>
+    <div class="header-badge">Exam & Viva Ready</div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item"><strong>Course:</strong> Software Engineering (CSE11117)</div>
+    <div class="meta-item"><strong>Standards:</strong> IEEE Std 830-1998 (SRS) & IEEE Std 1016-2009 (SDD)</div>
+    <div class="meta-item"><strong>Author:</strong> Aditya Chatterjee</div>
+    <div class="meta-item"><strong>Department:</strong> CSE, Adamas University (2025–2026)</div>
+  </div>
+</div>
+
+<!-- Section 1: Executive Overview & Problem Definition -->
+<div class="section">
+  <div class="section-title"><span class="num">1</span> Project Overview & Core Mission</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title teal">Project Core Scope & Purpose</div>
+      <p>A full-stack, 3-tier web-based <strong>Course Registration & Academic Management System</strong> designed to replace error-prone manual enrollment workflows with automated prerequisite graph verification, hard semester credit ceiling enforcement, real-time section seat tracking, and automated FIFO waitlists.</p>
+    </div>
+    <div class="card">
+      <div class="card-title blue">Key Problems Solved</div>
+      <ul>
+        <li><strong>Eliminates Double Booking:</strong> Automated collision detection & seat locks.</li>
+        <li><strong>Prevents Credit Overload:</strong> Hard system cap at 24.0 credits per semester.</li>
+        <li><strong>Zero Prerequisite Violations:</strong> Real-time dependency graph checking.</li>
+        <li><strong>Automated Fairness:</strong> Dynamic 1-up FIFO queue promotion on drops.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: SDLC Model Analysis -->
+<div class="section">
+  <div class="section-title"><span class="num">2</span> Software Development Life Cycle (SDLC) Model</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">SDLC Model</th>
+        <th style="width: 28%;">Engineering Philosophy</th>
+        <th style="width: 32%;">Strengths / Weaknesses</th>
+        <th style="width: 18%;">Suitability & Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Waterfall Model</strong></td>
+        <td>Linear-sequential phases (Requirements &rarr; Design &rarr; Implementation &rarr; Testing).</td>
+        <td>Clear milestones, but highly rigid; prohibits early prototyping and dynamic requirement changes.</td>
+        <td><span class="tag tag-red">Unsuitable</span></td>
+      </tr>
+      <tr>
+        <td><strong>Spiral Model</strong></td>
+        <td>Risk-driven iterative model with formal risk mitigation cycles.</td>
+        <td>Exceptional for mission-critical aerospace/defense; excessive management overhead for web systems.</td>
+        <td><span class="tag tag-amber">Sub-optimal</span></td>
+      </tr>
+      <tr>
+        <td><strong>Agile Incremental Iterative</strong></td>
+        <td>Decomposes system into sprint cycles delivering working software increments continuously.</td>
+        <td>Rapid validation, continuous stakeholder feedback, adaptive schema evolution, parallel API & UI builds.</td>
+        <td><span class="tag tag-green">Selected Model</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="margin-top: 4px; font-size: 7.5pt; color: #475569;">
+    <strong>Sprint Breakdown (4 Sprints):</strong>
+    <span class="mono">Sprint 1:</span> Auth & Catalog Discovery &bull;
+    <span class="mono">Sprint 2:</span> Registration & Prerequisite Validation Engine &bull;
+    <span class="mono">Sprint 3:</span> Role Portals (Student, Instructor, Admin) &bull;
+    <span class="mono">Sprint 4:</span> ACID Testing, PWA Caching & Cloud Edge Deployment.
+  </div>
+</div>
+
+<!-- Section 3: 3-Tier Layered Architecture -->
+<div class="section">
+  <div class="section-title"><span class="num">3</span> 3-Tier System Architecture</div>
+  <div class="architecture-box">
+    <div class="arch-tier">
+      <h4 style="color: #0284c7;">Tier 1: Presentation Layer</h4>
+      <p>React 18 SPA, TypeScript, Vite, Tailwind CSS, Three.js 3D WebGL, GSAP 3, Lucide Icons</p>
+      <div style="font-size: 6.8pt; color: #0284c7; margin-top: 2px;">Student, Instructor & Admin Portals</div>
+    </div>
+    <div class="arch-arrow">&harr; HTTPS / JSON &harr;</div>
+    <div class="arch-tier">
+      <h4 style="color: #0d9488;">Tier 2: Application / API Layer</h4>
+      <p>Node.js, Express.js REST API, Identity Guard (JWT/Bcrypt), Credit Ceiling Guard, Prerequisite Graph Engine</p>
+      <div style="font-size: 6.8pt; color: #0d9488; margin-top: 2px;">ACID Business Validation Engine</div>
+    </div>
+    <div class="arch-arrow">&harr; Prisma ORM &harr;</div>
+    <div class="arch-tier">
+      <h4 style="color: #7c3aed;">Tier 3: Persistence Layer</h4>
+      <p>Prisma 5.x ORM, Relational SQLite (Dev) / PostgreSQL 15 (Prod) with connection pooling</p>
+      <div style="font-size: 6.8pt; color: #7c3aed; margin-top: 2px;">ACID Transactions & Snapshots</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 4: DFD Analysis -->
+<div class="section">
+  <div class="section-title"><span class="num">4</span> Data Flow Diagrams (DFD Levels 0, 1, 2)</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title blue">DFD Level 0: Context</div>
+      <ul style="font-size: 7.2pt;">
+        <li><strong>Entities:</strong> Student, Instructor, Administrator.</li>
+        <li><strong>Flows In:</strong> Enroll/drop requests, grade entries, curriculum definitions.</li>
+        <li><strong>Flows Out:</strong> Catalogs, GPA standing, student rosters, telemetry metrics.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title teal">DFD Level 1: Macro Process</div>
+      <ul style="font-size: 7.2pt;">
+        <li><strong>Process 1.0:</strong> Course Registration & Academic Management.</li>
+        <li><strong>5 Data Stores:</strong>
+          <span class="mono">D1: User</span>,
+          <span class="mono">D2: Course</span>,
+          <span class="mono">D3: Section</span>,
+          <span class="mono">D4: Enrollment</span>,
+          <span class="mono">D5: Waitlist</span>.
+        </li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title purple">DFD Level 2: Sub-Processes</div>
+      <ul style="font-size: 7.2pt;">
+        <li><strong>1.1:</strong> Authenticate & Verify User (D1).</li>
+        <li><strong>1.2:</strong> Browse Catalog & Check Prereqs (D2).</li>
+        <li><strong>1.3:</strong> Check Capacity & Waitlist (D3, D5).</li>
+        <li><strong>1.4:</strong> Process Enrollment & Drop (D4, D5).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 5: Database Schema & Relational Models -->
+<div class="section">
+  <div class="section-title"><span class="num">5</span> Database Schema & Relational Models (Prisma ORM)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Model</th>
+        <th style="width: 32%;">Attributes & Primary Keys</th>
+        <th style="width: 25%;">Relationships & Foreign Keys</th>
+        <th style="width: 28%;">Constraints & Business Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>User</strong></td>
+        <td><code>id (PK)</code>, <code>email (UQ)</code>, <code>name</code>, <code>role</code>, <code>studentId (UQ)</code>, <code>totalCredits</code></td>
+        <td>1:N with Enrollment, Waitlist, CourseSection (Instructor)</td>
+        <td>Roles: <code>STUDENT</code>, <code>INSTRUCTOR</code>, <code>ADMIN</code>. Tracks student credit accumulator.</td>
+      </tr>
+      <tr>
+        <td><strong>Department</strong></td>
+        <td><code>id (PK)</code>, <code>code (UQ)</code>, <code>name</code></td>
+        <td>1:N with Course (e.g., CSE, ECE, MATH)</td>
+        <td>Academic segregation & departmental course ownership.</td>
+      </tr>
+      <tr>
+        <td><strong>Course</strong></td>
+        <td><code>id (PK)</code>, <code>code (UQ)</code>, <code>title</code>, <code>credits</code>, <code>departmentId (FK)</code></td>
+        <td>M:N Self via Prerequisite, 1:N with CourseSection</td>
+        <td>Base catalog definition. Default credits = 4.</td>
+      </tr>
+      <tr>
+        <td><strong>Prerequisite</strong></td>
+        <td><code>id (PK)</code>, <code>courseId (FK)</code>, <code>prereqCourseId (FK)</code></td>
+        <td>Bridge table for Course &harr; Course self-reference</td>
+        <td><code>@@unique([courseId, prereqCourseId])</code> with Cascade delete. Enforces DAG structure.</td>
+      </tr>
+      <tr>
+        <td><strong>CourseSection</strong></td>
+        <td><code>id (PK)</code>, <code>courseId</code>, <code>termId</code>, <code>instructorId</code>, <code>maxCapacity</code>, <code>room</code></td>
+        <td>1:N with ScheduleSlot, Enrollment, Waitlist</td>
+        <td>Specific classroom section offering for an academic semester.</td>
+      </tr>
+      <tr>
+        <td><strong>Enrollment</strong></td>
+        <td><code>id (PK)</code>, <code>userId (FK)</code>, <code>sectionId (FK)</code>, <code>status</code>, <code>grade</code>, <code>registeredAt</code></td>
+        <td>FK User & CourseSection</td>
+        <td><code>@@unique([userId, sectionId])</code>. Status: <code>ENROLLED</code>, <code>DROPPED</code>, <code>COMPLETED</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>Waitlist</strong></td>
+        <td><code>id (PK)</code>, <code>userId (FK)</code>, <code>sectionId (FK)</code>, <code>position (Int)</code>, <code>createdAt</code></td>
+        <td>FK User & CourseSection</td>
+        <td><code>@@unique([userId, sectionId])</code>. Strict 1-based chronological FIFO queue ranking.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Section 6: Core Business Rules & Validation Engine -->
+<div class="section">
+  <div class="section-title"><span class="num">6</span> Core Business Rules (Validation Engine)</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title amber">BR-01 & BR-02: Academic Constraints</div>
+      <ul>
+        <li><strong>BR-01 (Credit Ceiling):</strong> Maximum hard ceiling of <strong>24.0 credits</strong> per student per term:
+          <div style="text-align: center; margin: 3px 0;"><span class="mono">CurrentCredits + CourseCredits &le; 24.0</span></div>
+        </li>
+        <li><strong>BR-02 (Prerequisite Compliance):</strong> Advanced courses require verified prior passing grades in all prerequisite courses.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title teal">BR-03, BR-04 & BR-05: Queue & Concurrency</div>
+      <ul>
+        <li><strong>BR-03 (Duplicate Guard):</strong> Blocks registering multiple sections of the same course in one semester.</li>
+        <li><strong>BR-04 (FIFO Waitlist Promotion):</strong> Releasing an enrolled seat triggers atomic promotion of Rank 1 waitlist student and shifts remaining ranks ($N-1$).</li>
+        <li><strong>BR-05 (Term Window Lock):</strong> Operations check <span class="mono">Term.registrationOpen === true</span>.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Section 7: Security & Non-Functional Requirements -->
+<div class="section">
+  <div class="section-title"><span class="num">7</span> Non-Functional Requirements (NFRs) & Security Architecture</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title blue">Performance & Concurrency</div>
+      <ul style="font-size: 7.2pt;">
+        <li>Catalog queries: <strong>&le; 100 ms</strong>.</li>
+        <li>Enrollment mutations: <strong>&le; 250 ms</strong>.</li>
+        <li>Supports <strong>1,000+ concurrent users</strong> during peak registration windows without deadlocks.</li>
+        <li>In-memory cache with 60s TTL.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title teal">Security & Protection</div>
+      <ul style="font-size: 7.2pt;">
+        <li><strong>Password Hashing:</strong> Bcrypt (salt rounds &ge; 10).</li>
+        <li><strong>Tokens:</strong> JWT Bearer auth (8-hr expiration).</li>
+        <li><strong>Injection Shield:</strong> Parameterized Prisma queries (Zero SQL Injection).</li>
+        <li><strong>Encryption:</strong> HTTPS / TLS 1.2 & 1.3 over port 443.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title purple">Safety & Availability</div>
+      <ul style="font-size: 7.2pt;">
+        <li><strong>ACID Transactions:</strong> Full rollback on any validation/capacity failure.</li>
+        <li><strong>Availability SLA:</strong> &ge; 99.9% uptime.</li>
+        <li><strong>Disaster Recovery:</strong> Write-Ahead Logging (WAL) & 24h snapshot backups.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Section 8: Technology Stack & Cloud Deployments -->
+<div class="section">
+  <div class="section-title"><span class="num">8</span> Technology Stack & Cloud Deployment Details</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tier / Domain</th>
+        <th>Technologies Used</th>
+        <th>Deployment & Optimization Highlights</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Frontend</strong></td>
+        <td>React 18, TypeScript, Vite, Tailwind CSS, Three.js, GSAP 3</td>
+        <td>Deployed on <strong>Cloudflare Pages</strong> / <strong>Firebase Hosting</strong> with SPA fallback rewrites (<code>_redirects</code> / <code>firebase.json</code>).</td>
+      </tr>
+      <tr>
+        <td><strong>Backend API</strong></td>
+        <td>Node.js, Express.js, TypeScript</td>
+        <td>Hosted on <strong>Google Cloud Run</strong> / Render containerized via multi-stage <code>Dockerfile</code> on port 5000.</td>
+      </tr>
+      <tr>
+        <td><strong>Database Tier</strong></td>
+        <td>SQLite 3 (Dev) / PostgreSQL 15 (Production), Prisma ORM</td>
+        <td>Type-safe migrations (<span class="mono">npx prisma migrate dev</span>), connection pooling, and atomic seed scripts.</td>
+      </tr>
+      <tr>
+        <td><strong>Acceleration</strong></td>
+        <td>Service Worker PWA CacheStorage, Server RAM In-Memory Cache</td>
+        <td>Sub-50ms static assets, hardware-accelerated 120 FPS 3D canvas rendering, and offline cache resilience.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Section 9: Viva Questions and Answers -->
+<div class="section">
+  <div class="section-title"><span class="num">9</span> Top High-Frequency Viva Questions & Model Answers</div>
+  
+  <div class="qa-card">
+    <div class="qa-question">Q1: Why did you choose the Agile Incremental Iterative model over the traditional Waterfall model?</div>
+    <div class="qa-answer"><strong>Answer:</strong> Waterfall requires static requirements upfront and delays testing until the very end, making prerequisite changes or UI refinements catastrophic. The <strong>Agile Incremental model</strong> allowed us to develop 4 distinct sprints (Auth, Engine, Portals, Cloud Integration), test ACID transactions early, and continuously refine validation business rules.</div>
+  </div>
+
+  <div class="qa-card">
+    <div class="qa-question">Q2: How does the system handle race conditions when two students click "Register" for the last available seat simultaneously?</div>
+    <div class="qa-answer"><strong>Answer:</strong> We wrap the seat check, capacity decrement, and enrollment insert within an <strong>atomic ACID database transaction</strong> using Prisma's <span class="mono">$transaction()</span>. The first transaction acquires a lock, decrements the quota, and commits; the second transaction encounters a capacity of 0, rolls back cleanly, and offers the student a position on the FIFO waitlist.</div>
+  </div>
+
+  <div class="qa-card">
+    <div class="qa-question">Q3: How is the Prerequisite relationship designed in the relational database schema?</div>
+    <div class="qa-answer"><strong>Answer:</strong> It is implemented as a <strong>self-referencing many-to-many relationship</strong> on the <span class="mono">Course</span> entity via a dedicated bridge table <span class="mono">Prerequisite</span> containing <span class="mono">courseId</span> and <span class="mono">prereqCourseId</span>, enforced by a composite unique constraint <span class="mono">@@unique([courseId, prereqCourseId])</span>.</div>
+  </div>
+
+  <div class="qa-card">
+    <div class="qa-question">Q4: How are Single-Page Application (SPA) 404 errors prevented when deploying to Cloudflare Pages or Firebase Hosting?</div>
+    <div class="qa-answer"><strong>Answer:</strong> In SPAs, routing is handled client-side. To prevent 404s on browser reloads of routes like <span class="mono">/catalog</span> or <span class="mono">/dashboard</span>, we configured <span class="mono">frontend/public/_redirects</span> with <span class="mono">/* /index.html 200</span> for Cloudflare Pages, and <span class="mono">"rewrites": [{ "source": "**", "destination": "/index.html" }]</span> in <span class="mono">firebase.json</span>.</div>
+  </div>
+
+  <div class="qa-card">
+    <div class="qa-question">Q5: What mechanisms ensure data security and prevent SQL Injection attacks?</div>
+    <div class="qa-answer"><strong>Answer:</strong> Passwords are protected using <strong>salted Bcrypt hashing</strong> (work factor &ge; 10), authentication uses cryptographically signed <strong>JWT Bearer tokens</strong>, and SQL Injection is completely mitigated because <strong>Prisma ORM</strong> generates parameterized queries, preventing malicious SQL strings from executing.</div>
+  </div>
+
+  <div class="qa-card">
+    <div class="qa-question">Q6: What is the FIFO Waitlist promotion algorithm?</div>
+    <div class="qa-answer"><strong>Answer:</strong> When an enrolled student drops a section, the backend executes a drop transaction, queries the <span class="mono">Waitlist</span> table for the entry with <span class="mono">position = 1</span> for that section, verifies the candidate's credit limit (&le; 24 credits), converts their status to <span class="mono">ENROLLED</span>, and decrements the rank of all remaining waitlisted students by 1.</div>
+  </div>
+
+</div>
+
+</body>
+</html>
