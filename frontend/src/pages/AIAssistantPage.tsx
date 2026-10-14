@@ -753,9 +753,9 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
     aiConfig.provider !== "offline" && Boolean(aiConfig.apiKey && aiConfig.apiKey.trim());
 
   return (
-    <div className="min-h-screen bg-[#0B0A09] text-[#FAF3E1] flex flex-col">
+    <div className="h-full w-full flex flex-col min-h-0 overflow-hidden bg-[#0B0A09] text-[#FAF3E1] select-none">
       {/* ✦ 1. HEADER & CONTROL DOCK ✦ */}
-      <header className="border-b border-[#F5E7C6]/15 bg-[#0F0E13] px-4 sm:px-6 py-4 sticky top-0 z-20 backdrop-blur-md">
+      <header className="shrink-0 border-b border-[#F5E7C6]/15 bg-[#0F0E13] px-4 sm:px-6 py-3 sm:py-3.5 z-20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6D1F] to-[#3B82F6] flex items-center justify-center shadow-lg shadow-[#FF6D1F]/20 text-white font-bold">
@@ -829,7 +829,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
       </header>
 
       {/* ✦ 2. STUDY MODE SELECTOR & ENROLLED COURSES CONTEXT BAR ✦ */}
-      <div className="border-b border-[#F5E7C6]/10 bg-[#0A0A0E] px-4 sm:px-6 py-2.5">
+      <div className="shrink-0 border-b border-[#F5E7C6]/10 bg-[#0A0A0E] px-4 sm:px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Mode Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
@@ -895,8 +895,9 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
       </div>
 
       {/* ✦ 3. CHAT CONVERSATION FEED ✦ */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto w-full">
-        {messages.map((msg, index) => {
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="max-w-5xl mx-auto space-y-5">
+          {messages.map((msg, index) => {
           const isUser = msg.role === "user";
 
           return (
@@ -1003,10 +1004,11 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
         )}
 
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* ✦ 4. PROMPT SUGGESTION CHIPS ✦ */}
-      <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 pb-2">
+      <div className="shrink-0 max-w-5xl mx-auto w-full px-4 sm:px-6 py-2 bg-[#0B0A09]/80 backdrop-blur-sm border-t border-[#F5E7C6]/5">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs scrollbar-none">
           <span className="text-slate-400 font-semibold flex items-center gap-1 shrink-0">
             <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> Suggestions:
@@ -1139,7 +1141,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
       </div>
 
       {/* ✦ 5. INPUT DOCK & ACTION BAR ✦ */}
-      <footer className="border-t border-[#F5E7C6]/15 bg-[#0F0E13] px-4 sm:px-6 py-4 sticky bottom-0 z-20">
+      <footer className="shrink-0 border-t border-[#F5E7C6]/15 bg-[#0F0E13] px-4 sm:px-6 py-3 sm:py-4 z-20">
         <div className="max-w-5xl mx-auto space-y-2">
           <div className="relative rounded-2xl border border-[#F5E7C6]/20 bg-[#16151E] focus-within:border-[#FF6D1F] transition-all shadow-xl shadow-black/40">
             <textarea

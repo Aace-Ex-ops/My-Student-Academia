@@ -10,7 +10,7 @@ interface TopbarProps {
 
 export function Topbar({ currentUser, onSwitchUser, users = [] }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 bg-[#0E0E12]/80 backdrop-blur-xl border-b border-[#F5E7C6]/15 px-4 sm:px-6 py-3 flex items-center justify-end shadow-md">
+    <header className="shrink-0 sticky top-0 z-30 bg-[#0E0E12]/80 backdrop-blur-xl border-b border-[#F5E7C6]/15 px-4 sm:px-6 py-3 flex items-center justify-end shadow-md">
       <ProfileDropdown
         currentUser={currentUser}
         onSwitchUser={onSwitchUser}

@@ -140,9 +140,14 @@ export function AppContent() {
   };
 
   const showLayoutHeaders = location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/onboarding';
+  const isAIAssistant = location.pathname === '/ai-assistant';
 
   return (
-    <div className="min-h-screen bg-[#0B0A09] text-[#FAF3E1] flex font-sans select-none">
+    <div
+      className={`bg-[#0B0A09] text-[#FAF3E1] flex font-sans select-none ${
+        isAIAssistant ? "h-screen h-[100dvh] overflow-hidden" : "min-h-screen"
+      }`}
+    >
       {showLayoutHeaders && (
         <MenuVertical
           currentUser={currentUser}
@@ -150,7 +155,11 @@ export function AppContent() {
           users={users}
         />
       )}
-      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-[#0B0A09]">
+      <main
+        className={`flex-1 min-w-0 flex flex-col bg-[#0B0A09] ${
+          isAIAssistant ? "h-full min-h-0 overflow-hidden" : "overflow-y-auto"
+        }`}
+      >
         {showLayoutHeaders && (
           <Topbar
             currentUser={currentUser}
@@ -158,7 +167,7 @@ export function AppContent() {
             users={users}
           />
         )}
-        <div className="flex-1">
+        <div className={`flex-1 min-w-0 ${isAIAssistant ? "min-h-0 flex flex-col overflow-hidden" : ""}`}>
           <Routes>
             <Route path="/" element={<LandingPage onLoginClick={() => navigate('/auth')} />} />
             <Route path="/auth" element={<AuthPage currentUser={currentUser || undefined} onLoginUser={(user: User) => setCurrentUser(user)} users={users} />} />
