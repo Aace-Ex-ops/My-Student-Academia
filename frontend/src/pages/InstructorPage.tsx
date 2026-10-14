@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { UserCheck, BookOpen, Users, Clock, Globe, Sparkles, Video, Mail, Calendar } from "lucide-react";
+import { UserCheck, BookOpen, Users, Clock, Globe, Sparkles, Video, Mail } from "lucide-react";
 import { User } from "@/types";
 import { getLocalEnrollments } from "@/lib/enrollmentStorage";
 import { EXPANDED_COURSE_CATALOG } from "@/lib/courseCatalogData";
@@ -388,12 +388,10 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
                         )})}
                       </div>
 
-                      <div className="mt-6 pt-4 border-t border-[#F5E7C6]/10 flex items-center gap-2">
-                        <button className="flex-1 py-2 rounded-xl bg-[#1A1A22] hover:bg-[#FF6D1F]/10 text-[#FAF3E1]/70 hover:text-[#FF6D1F] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/30 transition-colors text-[11px] font-bold flex items-center justify-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5" /> Message
-                        </button>
-                        <button className="flex-1 py-2 rounded-xl bg-[#1A1A22] hover:bg-[#FF6D1F]/10 text-[#FAF3E1]/70 hover:text-[#FF6D1F] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/30 transition-colors text-[11px] font-bold flex items-center justify-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" /> Schedule
+                      <div className="mt-6 pt-4 border-t border-[#F5E7C6]/10">
+                        <button className="w-full py-2.5 rounded-xl bg-[#1A1A22] hover:bg-[#FF6D1F]/15 text-[#FAF3E1]/80 hover:text-[#FF6D1F] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/40 transition-colors text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                          <Mail className="w-3.5 h-3.5 text-[#FF6D1F]" />
+                          <span>Message</span>
                         </button>
                       </div>
                     </div>
