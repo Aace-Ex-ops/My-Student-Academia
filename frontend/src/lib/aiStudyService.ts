@@ -44,11 +44,26 @@ export interface AIConfig {
 const STORAGE_CONFIG_KEY = "msa_ai_config_v1";
 const CHAT_HISTORY_PREFIX = "msa_ai_chat_history_v1_";
 
+// High-availability cascade for Gemini models (handles temporary high-demand 503 or model migration 404s)
+export const GEMINI_CASCADE_MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-3-flash-preview",
+  "gemma-4-26b-a4b-it",
+  "gemini-3.8-flash",
+  "gemini-flash-latest",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite-preview",
+  "gemma-4-31b-it",
+  "gemini-pro-latest",
+];
+
+const ENV_GEMINI_KEY = ((import.meta as any).env?.VITE_GEMINI_API_KEY || "").trim();
+
 // Default configurations
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  provider: "offline",
-  apiKey: "",
-  modelName: "gemini-1.5-flash",
+  provider: ENV_GEMINI_KEY ? "gemini" : "offline",
+  apiKey: ENV_GEMINI_KEY,
+  modelName: "gemini-3.1-flash-lite",
 };
 
 // ✦ 1. CONFIGURATION STORAGE & RETRIEVAL ✦
@@ -60,20 +75,19 @@ export function getStoredAIConfig(): AIConfig {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         return {
-          provider: parsed.provider || "offline",
-          apiKey: parsed.apiKey || "",
-          modelName: parsed.modelName || "gemini-1.5-flash",
+          provider: parsed.provider || (ENV_GEMINI_KEY ? "gemini" : "offline"),
+          apiKey: parsed.apiKey || ENV_GEMINI_KEY,
+          modelName: parsed.modelName || "gemini-3.1-flash-lite",
         };
       }
     }
 
     // 2. Fallback to Vite environment variable if configured during build/deployment
-    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
-    if (envKey) {
+    if (ENV_GEMINI_KEY) {
       return {
         provider: "gemini",
-        apiKey: envKey,
-        modelName: "gemini-1.5-flash",
+        apiKey: ENV_GEMINI_KEY,
+        modelName: "gemini-3.1-flash-lite",
       };
     }
   } catch (e) {
@@ -145,31 +159,33 @@ export async function testCloudAIConnection(config: AIConfig): Promise<{ success
   const cleanKey = config.apiKey.trim();
 
   if (config.provider === "gemini") {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.modelName || "gemini-1.5-flash"}:generateContent?key=${cleanKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Hello! Respond with 'CONNECTED'." }] }],
-        }),
-      });
+    let lastErrorMsg = "";
+    for (const model of GEMINI_CASCADE_MODELS) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Hello! Respond with 'CONNECTED'." }] }],
+          }),
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const msg = errorData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
-        return { success: false, message: `Google Gemini API Error: ${msg}` };
+        if (res.ok) {
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (text) {
+            return { success: true, message: `Successfully connected to Google Gemini (${model})!` };
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          lastErrorMsg = errData?.error?.message || `HTTP ${res.status}`;
+        }
+      } catch (e: any) {
+        lastErrorMsg = e?.message || String(e);
       }
-
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      if (text) {
-        return { success: true, message: "Successfully connected to Google Gemini 1.5 Flash!" };
-      }
-      return { success: false, message: "Received empty response from Gemini API." };
-    } catch (e: any) {
-      return { success: false, message: `Network error reaching Google Gemini: ${e?.message || e}` };
     }
+    return { success: false, message: `Google Gemini API Notice: ${lastErrorMsg}` };
   } else if (config.provider === "openai") {
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -637,36 +653,55 @@ export async function sendAIMessage({
         parts: [{ text: `${contextPrefix}${modeInstruction}${prompt}` }],
       });
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: formattedContents,
-          systemInstruction: {
-            parts: [{ text: ACADEMIC_SYSTEM_INSTRUCTION }],
-          },
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2500,
-          },
-        }),
-      });
+      let generatedText: string | null = null;
+      let lastErrorMessage = "";
 
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        console.warn("Gemini API call returned non-200, falling back:", errJson);
-        // Fallback gracefully to offline intelligence
+      // Cascade across compatible Gemini models if one is under high demand (503) or migrated (404)
+      for (const targetModel of GEMINI_CASCADE_MODELS) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: formattedContents,
+              systemInstruction: {
+                parts: [{ text: ACADEMIC_SYSTEM_INSTRUCTION }],
+              },
+              generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 2500,
+              },
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              generatedText = text;
+              break;
+            }
+          } else {
+            const errJson = await response.json().catch(() => ({}));
+            lastErrorMessage = errJson?.error?.message || `HTTP ${response.status}`;
+            console.warn(`Gemini model ${targetModel} status ${response.status}, cascading...`);
+          }
+        } catch (mErr: any) {
+          lastErrorMessage = mErr?.message || String(mErr);
+        }
+      }
+
+      if (!generatedText) {
+        console.warn("All Gemini cascade models unavailable, falling back:", lastErrorMessage);
         const offlineResult = generateOfflineResponse(prompt, mode, courseContext, enrolledList);
         return {
           ...offlineResult,
-          content: `> ⚠️ *Note: Gemini API notice (${errJson?.error?.message || response.statusText}). Switched automatically to Built-in Academic Engine:*\n\n${offlineResult.content}`,
+          content: `> ⚠️ *Note: Gemini API notice (${lastErrorMessage}). Switched automatically to Built-in Academic Engine:*\n\n${offlineResult.content}`,
         };
       }
-
-      const data = await response.json();
-      const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (generatedText) {
         // If in flashcards mode, extract or attach interactive cards if prompt allows
