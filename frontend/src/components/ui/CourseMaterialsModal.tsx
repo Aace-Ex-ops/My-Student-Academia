@@ -168,15 +168,15 @@ export function CourseMaterialsModal({
                             onClose();
                             onReadDocument(docItem);
                           }}
-                          className="flex-1 py-1.5 px-3 rounded-xl bg-white/5 hover:bg-[#FF6D1F]/15 text-[#FAF3E1] hover:text-[#FF6D1F] border border-white/10 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 py-2 px-3 rounded-xl bg-[#FF6D1F]/15 hover:bg-[#FF6D1F]/25 text-[#FF6D1F] border border-[#FF6D1F]/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                          <BookOpen className="w-3.5 h-3.5" />
-                          <span>Read Notes</span>
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Read PDF Online</span>
                         </button>
 
                         <button
                           onClick={() => generateCourseDocumentPDF(docItem)}
-                          className="py-1.5 px-3 rounded-xl bg-[#1A1A26] hover:bg-[#252538] text-[#FAF3E1] border border-[#F5E7C6]/15 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          className="py-2 px-3.5 rounded-xl bg-[#1A1A26] hover:bg-[#252538] text-[#FAF3E1] border border-[#F5E7C6]/15 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                           title="Download PDF"
                         >
                           <Download className="w-3.5 h-3.5 text-[#FF6D1F]" />

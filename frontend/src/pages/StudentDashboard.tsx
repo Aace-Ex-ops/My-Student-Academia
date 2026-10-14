@@ -36,6 +36,7 @@ import {
 } from "@/lib/enrollmentStorage";
 import { getCourseMaterials, CourseDocument } from "@/lib/courseMaterialsData";
 import { generateCourseDocumentPDF } from "@/lib/pdfGenerator";
+import { CourseMaterialsModal } from "@/components/ui/CourseMaterialsModal";
 import { StudyDocumentReaderModal } from "@/components/ui/StudyDocumentReaderModal";
 import { StudyMaterialLockedModal } from "@/components/ui/StudyMaterialLockedModal";
 
@@ -48,8 +49,8 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [dropMessage, setDropMessage] = useState<string | null>(null);
 
-  // Study Materials Vault State
-  const [selectedVaultCourseCode, setSelectedVaultCourseCode] = useState<string | null>(null);
+  // Study Materials State (Clean on-demand modal overlay)
+  const [selectedCourseForMaterials, setSelectedCourseForMaterials] = useState<{ code: string; title: string } | null>(null);
   const [activeDocumentToRead, setActiveDocumentToRead] = useState<CourseDocument | null>(null);
   const [isReaderModalOpen, setIsReaderModalOpen] = useState(false);
   const [lockedModalInfo, setLockedModalInfo] = useState<{
@@ -745,18 +746,16 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
-                              setSelectedVaultCourseCode(course.code);
-                              const el = document.getElementById("study-vault-section");
-                              if (el) el.scrollIntoView({ behavior: "smooth" });
+                              setSelectedCourseForMaterials({ code: course.code, title: course.title });
                             }}
-                            className="text-xs bg-[#FF6D1F]/15 hover:bg-[#FF6D1F]/25 text-[#FF6D1F] border border-[#FF6D1F]/30 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 font-bold cursor-pointer"
-                            title={`Access Study Notes for ${course.code}`}
+                            className="text-xs bg-[#FF6D1F]/15 hover:bg-[#FF6D1F]/25 text-[#FF6D1F] border border-[#FF6D1F]/30 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-bold cursor-pointer"
+                            title={`Access Official Course Materials & PDFs for ${course.code}`}
                           >
-                            <FileText className="w-3.5 h-3.5" /> Notes & Docs
+                            <FileText className="w-3.5 h-3.5" /> Course Materials
                           </button>
                           <button
                             onClick={() => handleDrop(section.id, course.code)}
-                            className="text-xs text-rose-400 hover:bg-rose-950/50 hover:text-rose-300 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 font-bold cursor-pointer"
+                            className="text-xs text-rose-400 hover:bg-rose-950/50 hover:text-rose-300 px-2.5 py-1.5 rounded-xl transition-colors flex items-center gap-1 font-bold cursor-pointer"
                             title={`Drop ${course.code}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Drop
@@ -861,160 +860,24 @@ export function StudentDashboard({ currentUser }: StudentDashboardProps) {
 
         </div>
 
-        {/* ✦ 5. ACADEMIC COURSE STUDY VAULT & DOCUMENT REPOSITORY ✦ */}
-        <div id="study-vault-section" className="bg-[#121216]/95 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-[#F5E7C6]/15 shadow-2xl space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#F5E7C6]/10">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6D1F]/15 border border-[#FF6D1F]/30 text-[#FF6D1F] text-xs font-black uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Enrolled Study Material Vault • Official PDFs & Notes</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-[#FAF3E1]">
-                Course Study Materials & Lecture Notes
-              </h2>
-              <p className="text-xs sm:text-sm text-[#FAF3E1]/70 mt-0.5">
-                Full-length lecture compendiums, worked problem sets, lab manuals, and exam formula sheets for your enrolled courses.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-500/30 px-3.5 py-2 rounded-xl self-start md:self-auto">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>{enrollments.length} Courses Unlocked</span>
-            </div>
-          </div>
-
-          {enrollments.length === 0 ? (
-            <div className="p-10 rounded-2xl bg-[#161620] border border-white/5 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-[#FAF3E1]/40">
-                <Lock className="w-6 h-6 text-rose-400" />
-              </div>
-              <h3 className="font-black text-base text-[#FAF3E1]">
-                Study Vault Empty (0 Registered Courses)
-              </h3>
-              <p className="text-xs text-[#FAF3E1]/60 max-w-md mx-auto leading-relaxed">
-                Study materials, lecture compendiums, and lab manuals are reserved for enrolled students. Head to the Course Catalog to register and unlock full access.
-              </p>
-              <Link
-                to="/catalog"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF6D1F] hover:bg-[#e65c10] text-[#FAF3E1] text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-[#FF6D1F]/25 cursor-pointer mt-2"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Browse Course Catalog</span>
-              </Link>
-            </div>
-          ) : (
-            <>
-              {/* Course Selector Tabs */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {enrollments.map((enr: any) => {
-                  const cCode = enr.section?.course?.code || enr.section?.courseId;
-                  const cTitle = enr.section?.course?.title || "Course";
-                  const isSelected = (selectedVaultCourseCode || enrollments[0]?.section?.course?.code) === cCode;
-                  return (
-                    <button
-                      key={enr.id}
-                      onClick={() => setSelectedVaultCourseCode(cCode)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                        isSelected
-                          ? "bg-[#FF6D1F] text-[#FAF3E1] shadow-lg shadow-[#FF6D1F]/25 scale-102"
-                          : "bg-[#181824] hover:bg-[#202030] text-[#FAF3E1]/70 border border-[#F5E7C6]/10"
-                      }`}
-                    >
-                      <span className="font-mono font-black">{cCode}</span>
-                      <span className="text-[11px] opacity-80 max-w-[120px] truncate">{cTitle}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Document Cards Grid for Selected Course */}
-              {(() => {
-                const activeCode = selectedVaultCourseCode || enrollments[0]?.section?.course?.code || "";
-                const materials = getCourseMaterials(activeCode);
-                const activeEnrollment = enrollments.find(
-                  (e: any) => (e.section?.course?.code || e.section?.courseId) === activeCode
-                ) || enrollments[0];
-                const activeCourseTitle = activeEnrollment?.section?.course?.title || "Enrolled Course";
-
-                return (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-xs text-[#FAF3E1]/60 px-1">
-                      <span>Showing {materials.length} verified study documents for <strong className="text-[#FAF3E1]">{activeCode}: {activeCourseTitle}</strong></span>
-                      <span className="text-emerald-400 font-bold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Enrolled Student Access
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {materials.map((docItem) => (
-                        <div
-                          key={docItem.id}
-                          className="p-5 rounded-2xl bg-[#161622] hover:bg-[#1B1B2A] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/40 transition-all flex flex-col justify-between group space-y-4 shadow-lg"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className={`px-2.5 py-1 rounded-lg bg-gradient-to-r ${docItem.badgeColor} text-white font-black text-[10px] uppercase tracking-wider shadow-sm`}>
-                                {docItem.typeLabel}
-                              </span>
-                              <span className="text-[11px] font-mono text-[#FAF3E1]/50">
-                                {docItem.fileSize} • ~{docItem.totalPages} pgs
-                              </span>
-                            </div>
-
-                            <h3 className="font-black text-sm text-[#FAF3E1] group-hover:text-[#FF6D1F] transition-colors leading-snug">
-                              {docItem.title}
-                            </h3>
-
-                            <p className="text-xs text-[#FAF3E1]/70 leading-relaxed line-clamp-2">
-                              {docItem.summary}
-                            </p>
-
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {docItem.topicsCovered.slice(0, 3).map((topic, i) => (
-                                <span
-                                  key={i}
-                                  className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-[#FAF3E1]/60 font-semibold"
-                                >
-                                  {topic}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="pt-3 border-t border-[#F5E7C6]/10 flex items-center justify-between gap-2">
-                            <button
-                              onClick={() => {
-                                setActiveDocumentToRead(docItem);
-                                setIsReaderModalOpen(true);
-                              }}
-                              className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-[#FF6D1F]/15 text-[#FAF3E1] hover:text-[#FF6D1F] border border-white/10 hover:border-[#FF6D1F]/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                            >
-                              <BookOpen className="w-3.5 h-3.5" />
-                              <span>Read Notes</span>
-                            </button>
-
-                            <button
-                              onClick={() => generateCourseDocumentPDF(docItem)}
-                              className="py-2 px-3.5 rounded-xl bg-[#1A1A26] hover:bg-[#252538] text-[#FAF3E1] border border-[#F5E7C6]/15 hover:border-[#FF6D1F]/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                              title="Download Official PDF"
-                            >
-                              <Download className="w-3.5 h-3.5 text-[#FF6D1F]" />
-                              <span>PDF</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
-        </div>
-
       </div>
 
-      {/* ✦ STUDY DOCUMENT READER MODAL ✦ */}
+      {/* ✦ COURSE STUDY MATERIALS MODAL (CLEAN ON-DEMAND MODAL OVERLAY) ✦ */}
+      {selectedCourseForMaterials && (
+        <CourseMaterialsModal
+          isOpen={!!selectedCourseForMaterials}
+          onClose={() => setSelectedCourseForMaterials(null)}
+          courseCode={selectedCourseForMaterials.code}
+          courseTitle={selectedCourseForMaterials.title}
+          isEnrolled={true}
+          onReadDocument={(doc) => {
+            setActiveDocumentToRead(doc);
+            setIsReaderModalOpen(true);
+          }}
+        />
+      )}
+
+      {/* ✦ STUDY DOCUMENT / ONLINE PDF READER MODAL ✦ */}
       <StudyDocumentReaderModal
         isOpen={isReaderModalOpen}
         onClose={() => setIsReaderModalOpen(false)}

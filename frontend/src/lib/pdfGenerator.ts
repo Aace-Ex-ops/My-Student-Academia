@@ -4,7 +4,7 @@
 import { jsPDF } from "jspdf";
 import { CourseDocument } from "./courseMaterialsData";
 
-export function generateCourseDocumentPDF(docData: CourseDocument): void {
+export function buildCourseDocumentPDF(docData: CourseDocument): jsPDF {
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -202,9 +202,19 @@ export function generateCourseDocumentPDF(docData: CourseDocument): void {
     );
   }
 
-  // Trigger browser download
+  return pdf;
+}
+
+export function generateCourseDocumentPDF(docData: CourseDocument): void {
+  const pdf = buildCourseDocumentPDF(docData);
   const safeFilename = `${docData.courseCode}_${docData.type}_MyStudentAcademia.pdf`.replace(/[^a-zA-Z0-9_.-]/g, "_");
   pdf.save(safeFilename);
+}
+
+export function getCourseDocumentPDFBlobUrl(docData: CourseDocument): string {
+  const pdf = buildCourseDocumentPDF(docData);
+  const blob = pdf.output("blob");
+  return URL.createObjectURL(blob);
 }
 
 // ✦ HIGH-RESOLUTION BROWSER PRINT ENGINE ✦
