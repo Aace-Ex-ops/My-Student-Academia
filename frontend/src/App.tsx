@@ -12,6 +12,7 @@ import { PerformancePage } from './pages/PerformancePage';
 import { InstructorPage } from './pages/InstructorPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
+import { apiFetch } from './lib/api';
 
 export function AppContent() {
   const [users, setUsers] = useState<User[]>([]);
@@ -60,11 +61,12 @@ export function AppContent() {
 
   const handleCompleteOnboarding = (data: OnboardingData) => {
     const base = currentUser || { id: `user-${Date.now()}`, name: data.name || "Student", email: data.email || "" };
+    const targetEmail = (data.email || base.email || "").trim().toLowerCase();
     const updatedUser: User = {
       ...base,
       ...data,
       name: data.name || base.name,
-      email: data.email || base.email,
+      email: targetEmail,
       username: data.username || base.username,
       phone: data.phone || base.phone,
       avatar: data.avatar,
@@ -79,6 +81,7 @@ export function AppContent() {
       gradYear: data.gradYear,
       plan: data.plan,
       paymentStatus: data.paymentStatus,
+      onboardingCompleted: true,
     };
     setCurrentUser(updatedUser);
     localStorage.setItem('msa_custom_user_profile', JSON.stringify(updatedUser));
@@ -87,14 +90,22 @@ export function AppContent() {
       const rawReg = localStorage.getItem('msa_registered_accounts_registry');
       let reg = rawReg ? JSON.parse(rawReg) : {};
       
-      // Fix: If legacy data was an array, JSON.stringify will ignore string properties.
+      // Fix: If legacy data was an array, reset it.
       if (Array.isArray(reg)) {
         reg = {};
       }
       
-      reg[updatedUser.email.toLowerCase()] = updatedUser;
-      localStorage.setItem('msa_registered_accounts_registry', JSON.stringify(reg));
+      if (targetEmail) {
+        reg[targetEmail] = updatedUser;
+        localStorage.setItem('msa_registered_accounts_registry', JSON.stringify(reg));
+      }
     } catch (e) {}
+
+    // Persist to backend database
+    apiFetch('/api/auth/update-profile', {
+      method: 'POST',
+      body: JSON.stringify(updatedUser),
+    }).catch((e) => console.warn('Backend update profile notice:', e));
   };
 
   const showLayoutHeaders = location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/onboarding';

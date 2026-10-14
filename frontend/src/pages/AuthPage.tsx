@@ -94,7 +94,7 @@ function extractNameFromEmail(emailStr: string): string {
     .join(" ");
 }
 
-export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
+export function AuthPage({ currentUser, onLoginUser, users = [] }: AuthPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -292,11 +292,18 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       return;
     }
 
-    // 1. Check if account already exists in local registry OR backend DB
+    // 1. Check if account already exists in local registry OR backend DB OR passed users prop
     let existingUser: User | null = null;
     const registry = getRegisteredAccounts();
     if (registry[emailToUse]) {
       existingUser = registry[emailToUse];
+    }
+
+    if (!existingUser && users && users.length > 0) {
+      const match = users.find((u) => u.email?.trim().toLowerCase() === emailToUse);
+      if (match) {
+        existingUser = match;
+      }
     }
 
     if (!existingUser) {
@@ -320,6 +327,9 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
       // ✦ EXISTING RETURNING USER: Log in directly & go straight to /dashboard! ✦
       const loggedInUser: User = {
         ...existingUser,
+        email: emailToUse,
+        name: existingUser.name || nameToUse,
+        onboardingCompleted: true,
         googlePhotoUrl: photoToUse || existingUser.googlePhotoUrl,
         avatarUrl: photoToUse || existingUser.avatarUrl,
       };
@@ -334,7 +344,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
 
       setTimeout(() => {
         navigate("/dashboard");
-      }, 600);
+      }, 500);
 
     } else {
       // ✦ FIRST-TIME GOOGLE USER: Pre-fill details from Gmail & prompt password creation ✦
@@ -405,7 +415,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         return;
       }
 
-      // Check if account exists locally or on backend
+      // Check if account exists locally or on backend or in users prop
       const registry = getRegisteredAccounts();
       let existsLocally = !!registry[emailToUse];
       let existsOnBackend = false;
@@ -421,7 +431,11 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         }
       } catch (e) {}
 
-      if (existsLocally || existsOnBackend) {
+      const existsInUsersProp = users?.some(
+        (u) => u.email?.trim().toLowerCase() === emailToUse
+      );
+
+      if (existsLocally || existsOnBackend || existsInUsersProp) {
         setIsLoading(false);
         setErrorMessage("An account with this email already exists. Please sign in instead.");
         setIsSignUp(false);
@@ -496,6 +510,11 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         authenticatedUser = registry[emailToUse];
       }
 
+      if (!authenticatedUser && users && users.length > 0) {
+        const match = users.find((u) => u.email?.trim().toLowerCase() === emailToUse);
+        if (match) authenticatedUser = match;
+      }
+
       if (!authenticatedUser) {
         try {
           const res = await apiFetch("/api/auth/login", {
@@ -518,6 +537,22 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         }
       }
 
+      // Check check-user endpoint as fallback
+      if (!authenticatedUser) {
+        try {
+          const checkRes = await apiFetch("/api/auth/check-user", {
+            method: "POST",
+            body: JSON.stringify({ email: emailToUse }),
+          });
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.exists && checkData.user) {
+              authenticatedUser = checkData.user;
+            }
+          }
+        } catch (e) {}
+      }
+
       // FIRST TIME USER trying to sign in -> Auto-switch to Create Account & pre-fill name from Gmail!
       if (!authenticatedUser) {
         setIsLoading(false);
@@ -525,7 +560,7 @@ export function AuthPage({ currentUser, onLoginUser }: AuthPageProps) {
         setEmail(emailToUse);
         const derivedName = extractNameFromEmail(emailToUse);
         setFullName(derivedName);
-        setFirstTimeNotice(`✨ First-time MSA user detected! We've pre-filled your details from your Gmail ID (${derivedName}). Please set a password and confirm password below to create your account.`);
+        setFirstTimeNotice(`✨ No account found for ${emailToUse}. Please enter a password and confirm password below to create your account.`);
         return;
       }
 

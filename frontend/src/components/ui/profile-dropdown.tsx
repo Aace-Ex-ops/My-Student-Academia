@@ -9,7 +9,10 @@ import {
   ChevronDown,
   Sparkles,
   Award,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface ProfileDropdownProps {
   currentUser?: any;
@@ -96,6 +99,8 @@ export function ProfileDropdown({
   isCollapsed = false,
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   const handleSignOut = () => {
@@ -103,6 +108,47 @@ export function ProfileDropdown({
     localStorage.removeItem("msa_custom_user_profile");
     // Reload the page to clear any React state in App.tsx
     window.location.href = "/";
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const email = activeUser.email || "";
+      const userId = activeUser.id || "";
+      
+      await apiFetch("/api/auth/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ email, userId }),
+      }).catch((e) => console.warn(e));
+
+      // Remove from registries
+      try {
+        const raw = localStorage.getItem("msa_registered_accounts_registry");
+        if (raw) {
+          const reg = JSON.parse(raw);
+          if (email && reg[email.toLowerCase()]) {
+            delete reg[email.toLowerCase()];
+            localStorage.setItem("msa_registered_accounts_registry", JSON.stringify(reg));
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const rawEnr = localStorage.getItem("msa_user_enrollments_registry");
+        if (rawEnr) {
+          const enr = JSON.parse(rawEnr);
+          if (email && enr[email.toLowerCase()]) delete enr[email.toLowerCase()];
+          if (userId && enr[userId.toLowerCase()]) delete enr[userId.toLowerCase()];
+          localStorage.setItem("msa_user_enrollments_registry", JSON.stringify(enr));
+        }
+      } catch (e) {}
+
+      localStorage.removeItem("msa_custom_user_profile");
+      window.location.href = "/";
+    } catch (err) {
+      console.error(err);
+      setIsDeleting(false);
+    }
   };
 
   const activeUser = currentUser || {
@@ -243,9 +289,63 @@ export function ProfileDropdown({
               </button>
             </div>
 
+            {/* Menu Option 7: Delete Account */}
+            <div className="pt-1">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowDeleteModal(true);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-500/70 hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4 text-rose-500/70" />
+                <span>Delete Account</span>
+              </button>
+            </div>
+
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#121216] border border-rose-500/30 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[#FAF3E1]">Delete Account Permanently</h3>
+                <p className="text-xs text-rose-400/80 font-mono mt-0.5">{activeUser.email}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#FAF3E1]/70 leading-relaxed">
+              Are you sure you want to permanently delete your student account? All course registrations, waitlists, and academic profile records will be permanently removed. This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#F5E7C6]/10">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#FAF3E1]/70 hover:text-[#FAF3E1] hover:bg-[#1A1A22] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteAccount}
+                className="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? "Deleting Account..." : "Confirm & Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -209,6 +209,80 @@ router.post('/google', async (req: Request, res: Response) => {
   }
 });
 
+// ✦ UPDATE USER PROFILE ✦
+router.post('/update-profile', async (req: Request, res: Response) => {
+  const { email, id, name, major } = req.body;
+  if (!email && !id) {
+    return res.status(400).json({ error: 'Email or ID required to update profile' });
+  }
+
+  try {
+    const normalizedEmail = email ? email.trim().toLowerCase() : undefined;
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          normalizedEmail ? { email: normalizedEmail } : {},
+          id ? { id } : {},
+        ],
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'User not found in database' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        ...(name ? { name: name.trim() } : {}),
+        ...(major ? { major } : {}),
+      },
+    });
+
+    return res.json({
+      message: 'Profile updated successfully',
+      user: updated,
+    });
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// ✦ DELETE ACCOUNT (SINGLE EMAIL ACCORDING TO USER DEMAND) ✦
+router.post('/delete-account', async (req: Request, res: Response) => {
+  const { email, userId } = req.body;
+  if (!email && !userId) {
+    return res.status(400).json({ error: 'Email or userId is required to delete account' });
+  }
+
+  try {
+    const normalizedEmail = email ? email.trim().toLowerCase() : undefined;
+    const targetUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          normalizedEmail ? { email: normalizedEmail } : {},
+          userId ? { id: userId } : {},
+        ],
+      },
+    });
+
+    if (!targetUser) {
+      return res.json({ success: true, message: 'Account already removed or does not exist' });
+    }
+
+    // Cascade delete user relations
+    await prisma.enrollment.deleteMany({ where: { userId: targetUser.id } });
+    await prisma.waitlist.deleteMany({ where: { userId: targetUser.id } });
+    await prisma.user.delete({ where: { id: targetUser.id } });
+
+    return res.json({ success: true, message: 'Account permanently deleted from system.' });
+  } catch (error) {
+    console.error('Delete Account Error:', error);
+    return res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 // ✦ WIPE DATABASE USERS (ADMIN/RESET ENDPOINT) ✦
 router.post('/wipe-all-users', async (req: Request, res: Response) => {
   try {

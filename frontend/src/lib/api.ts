@@ -11,12 +11,20 @@ export const API_BASE_URL: string =
  * Standard fetch helper that prepends the configured API base URL
  */
 export async function apiFetch(endpoint: string, init?: RequestInit): Promise<Response> {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-  
-  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
-    ? endpoint
-    : `${baseUrl}/${cleanEndpoint}`;
+  let url = endpoint;
+  if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const base = API_BASE_URL.replace(/\/+$/, '');
+    
+    // Avoid double '/api' if base ends with '/api' and endpoint already starts with '/api/'
+    if (base.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+      url = `${base}${cleanEndpoint.slice(4)}`;
+    } else if (cleanEndpoint.startsWith(base)) {
+      url = cleanEndpoint;
+    } else {
+      url = `${base}${cleanEndpoint}`;
+    }
+  }
 
   return fetch(url, {
     ...init,

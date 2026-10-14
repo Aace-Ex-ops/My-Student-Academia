@@ -296,12 +296,24 @@ const majorCareerMap: Record<string, string[]> = {
 export function OnboardingPage({ currentUser, onCompleteOnboarding }: OnboardingPageProps) {
   const navigate = useNavigate();
 
-  // Protect onboarding - redirect to /auth if user has not logged in or signed up
+  // Protect onboarding - redirect to /auth if user has not logged in, or to /dashboard if already onboarded
   useEffect(() => {
     if (!currentUser) {
-      navigate("/auth");
+      const saved = localStorage.getItem("msa_custom_user_profile");
+      if (!saved) {
+        navigate("/auth");
+      }
+    } else if (currentUser.onboardingCompleted) {
+      navigate("/dashboard");
     }
   }, [currentUser, navigate]);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name && !displayName) setDisplayName(currentUser.name);
+      if (currentUser.email && !displayEmail) setDisplayEmail(currentUser.email);
+    }
+  }, [currentUser]);
 
   // Multi-step State (1 to 5)
   const [step, setStep] = useState(1);
@@ -530,10 +542,12 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
   };
 
   const handleFinish = () => {
+    const resolvedEmail = (displayEmail.trim() || currentUser?.email || "").toLowerCase();
+    const resolvedName = displayName.trim() || currentUser?.name || "Student";
     const selectedOption = dynamicAvatarOptions.find((a) => a.id === selectedAvatar);
     const onboardingData = {
-      name: displayName.trim() || currentUser?.name || "Student",
-      email: (displayEmail.trim() || currentUser?.email || "").toLowerCase(),
+      name: resolvedName,
+      email: resolvedEmail,
       username: username.startsWith("@") ? username : `@${username}`,
       avatar: selectedAvatar,
       avatarIcon: selectedOption?.icon || "👨‍🎓",
@@ -547,6 +561,7 @@ export function OnboardingPage({ currentUser, onCompleteOnboarding }: Onboarding
       gradYear,
       plan: selectedPlan,
       paymentStatus: (isPremiumPlan ? "PAID" : "FREE") as "PAID" | "FREE",
+      onboardingCompleted: true,
     };
 
     if (onCompleteOnboarding) onCompleteOnboarding(onboardingData);
