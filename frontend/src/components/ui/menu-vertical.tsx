@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   Menu,
   X,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { User } from "@/types";
@@ -47,6 +48,11 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
       label: "Available Faculty",
       path: "/instructor",
       icon: UserCheck,
+    },
+    {
+      label: "Faculty Messages",
+      path: "/messages",
+      icon: MessageSquare,
     },
   ];
 

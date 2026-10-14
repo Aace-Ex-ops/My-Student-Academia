@@ -389,9 +389,12 @@ export function InstructorPage({ currentUser }: InstructorPageProps) {
                       </div>
 
                       <div className="mt-6 pt-4 border-t border-[#F5E7C6]/10">
-                        <button className="w-full py-2.5 rounded-xl bg-[#1A1A22] hover:bg-[#FF6D1F]/15 text-[#FAF3E1]/80 hover:text-[#FF6D1F] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/40 transition-colors text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                        <button
+                          onClick={() => navigate(`/messages?faculty=${encodeURIComponent(faculty.name)}`)}
+                          className="w-full py-2.5 rounded-xl bg-[#1A1A22] hover:bg-[#FF6D1F]/15 text-[#FAF3E1]/80 hover:text-[#FF6D1F] border border-[#F5E7C6]/10 hover:border-[#FF6D1F]/40 transition-colors text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                        >
                           <Mail className="w-3.5 h-3.5 text-[#FF6D1F]" />
-                          <span>Message</span>
+                          <span>Message {faculty.name.split(" ").slice(-1)[0]}</span>
                         </button>
                       </div>
                     </div>
