@@ -3,17 +3,18 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-// Register Ultra-Fast Service Worker Cache in Production and Dev
+// Automatically unregister stale service worker caches to guarantee latest deployment
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((reg) => {
-        console.log('[MSA Cache Engine] Service Worker registered with scope:', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('[MSA Cache Engine] Service Worker registration skipped:', err);
-      });
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
+if ('caches' in window) {
+  caches.keys().then((keys) => {
+    keys.forEach((key) => caches.delete(key));
   });
 }
 

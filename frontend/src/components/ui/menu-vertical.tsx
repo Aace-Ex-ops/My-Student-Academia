@@ -105,7 +105,7 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
       {/* Desktop Vertical Sidebar */}
       <aside
         className={cn(
-          "bg-[#0E0E12] border-r border-[#F5E7C6]/15 h-screen sticky top-0 flex flex-col justify-between p-4 shadow-xl z-40 flex-shrink-0 select-none transition-all duration-300 ease-in-out",
+          "bg-[#0E0E12] border-r border-[#F5E7C6]/15 h-screen sticky top-0 flex flex-col justify-between p-4 shadow-xl z-40 flex-shrink-0 select-none transition-all duration-300 ease-in-out overflow-y-auto scrollbar-none",
           isCollapsed ? "w-20" : "w-64",
           /* Mobile Drawer Responsive positioning */
           "hidden md:flex",
