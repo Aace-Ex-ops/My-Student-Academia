@@ -29,6 +29,8 @@ export interface ChatMessage {
   timestamp: number;
   mode?: AIMode;
   courseCode?: string;
+  modelUsed?: string;
+  wasFlipped?: boolean;
   flashcards?: FlashcardItem[];
   quizQuestions?: PracticeQuestionItem[];
 }
@@ -44,18 +46,104 @@ export interface AIConfig {
 const STORAGE_CONFIG_KEY = "msa_ai_config_v1";
 const CHAT_HISTORY_PREFIX = "msa_ai_chat_history_v1_";
 
-// High-availability cascade for Gemini models (handles temporary high-demand 503 or model migration 404s)
+// High-availability cascade for Gemini models (prioritizes 3.5 Flash and auto-flips on traffic buffer / token limits)
 export const GEMINI_CASCADE_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemma-4-26b-a4b-it",
-  "gemini-3.8-flash",
-  "gemini-flash-latest",
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite-preview",
-  "gemma-4-31b-it",
-  "gemini-pro-latest",
+  "gemini-3.5-flash",        // Primary user-requested flagship model
+  "gemini-3-flash-preview",  // Ultra-fast preview fallback
+  "gemini-3.1-flash-lite",   // Lightweight token-saver model
+  "gemini-3.5-flash-lite",   // 3.5 series lite
+  "gemini-3.8-flash",        // 3.8 series flash
+  "gemini-flash-latest",     // General latest flash alias
+  "gemma-4-26b-a4b-it",      // Open-weight high performance
+  "gemma-4-31b-it",          // Gemma 31B
+  "gemini-pro-latest",       // Pro tier
 ];
+
+// In-memory model health & cooldown tracker
+interface ModelHealthRecord {
+  cooldownUntil: number;
+  lastReason: string;
+  failureCount: number;
+}
+
+const modelHealthMap: Record<string, ModelHealthRecord> = {};
+let roundRobinIndex = 0;
+
+export function getModelPoolHealth(): Record<
+  string,
+  { status: "ready" | "cooldown" | "buffered"; remainingSec: number; reason: string }
+> {
+  const now = Date.now();
+  const result: Record<string, any> = {};
+  for (const m of GEMINI_CASCADE_MODELS) {
+    const record = modelHealthMap[m];
+    if (record && record.cooldownUntil > now) {
+      const remainingSec = Math.ceil((record.cooldownUntil - now) / 1000);
+      result[m] = {
+        status:
+          record.lastReason.includes("503") || record.lastReason.includes("buffer")
+            ? "buffered"
+            : "cooldown",
+        remainingSec,
+        reason: record.lastReason,
+      };
+    } else {
+      result[m] = {
+        status: "ready",
+        remainingSec: 0,
+        reason: "Available & Ready",
+      };
+    }
+  }
+  return result;
+}
+
+export function markModelCooldown(model: string, status: number, errorMsg: string): void {
+  const isTrafficBuffer = status === 503 || status === 504 || status === 500;
+  const isExhausted = status === 429;
+  const cooldownMs = isTrafficBuffer ? 25_000 : isExhausted ? 60_000 : 30_000;
+  const existing = modelHealthMap[model] || { cooldownUntil: 0, lastReason: "", failureCount: 0 };
+  modelHealthMap[model] = {
+    cooldownUntil: Date.now() + cooldownMs,
+    lastReason: isTrafficBuffer
+      ? `Traffic buffer / high demand (${status})`
+      : isExhausted
+      ? `Token quota / rate limit exhausted (${status})`
+      : `Status ${status}: ${errorMsg.slice(0, 50)}`,
+    failureCount: existing.failureCount + 1,
+  };
+}
+
+export function clearModelCooldown(model: string): void {
+  delete modelHealthMap[model];
+}
+
+export function getPrioritizedModelPool(): string[] {
+  const now = Date.now();
+  const ready = GEMINI_CASCADE_MODELS.filter(
+    (m) => !modelHealthMap[m] || modelHealthMap[m].cooldownUntil <= now
+  );
+  const cooldown = GEMINI_CASCADE_MODELS.filter(
+    (m) => modelHealthMap[m] && modelHealthMap[m].cooldownUntil > now
+  );
+
+  let pool: string[] = [];
+  if (ready.includes("gemini-3.5-flash")) {
+    // If gemini-3.5-flash is ready, prioritize it while balancing load across other ready models
+    const others = ready.filter((m) => m !== "gemini-3.5-flash");
+    if (roundRobinIndex % 2 === 0 || others.length === 0) {
+      pool = ["gemini-3.5-flash", ...others];
+    } else {
+      const rotIdx = roundRobinIndex % others.length;
+      pool = [others[rotIdx], "gemini-3.5-flash", ...others.filter((_, i) => i !== rotIdx)];
+    }
+    roundRobinIndex++;
+  } else {
+    pool = ready.length > 0 ? ready : GEMINI_CASCADE_MODELS;
+  }
+
+  return [...new Set([...pool, ...cooldown, ...GEMINI_CASCADE_MODELS])];
+}
 
 const ENV_GEMINI_KEY = ((import.meta as any).env?.VITE_GEMINI_API_KEY || "").trim();
 
@@ -63,7 +151,7 @@ const ENV_GEMINI_KEY = ((import.meta as any).env?.VITE_GEMINI_API_KEY || "").tri
 export const DEFAULT_AI_CONFIG: AIConfig = {
   provider: ENV_GEMINI_KEY ? "gemini" : "offline",
   apiKey: ENV_GEMINI_KEY,
-  modelName: "gemini-3.1-flash-lite",
+  modelName: "gemini-3.5-flash",
 };
 
 // ✦ 1. CONFIGURATION STORAGE & RETRIEVAL ✦
@@ -601,6 +689,8 @@ export async function sendAIMessage({
   config?: AIConfig;
 }): Promise<{
   content: string;
+  modelUsed?: string;
+  wasFlipped?: boolean;
   flashcards?: FlashcardItem[];
   quizQuestions?: PracticeQuestionItem[];
 }> {
@@ -655,9 +745,14 @@ export async function sendAIMessage({
 
       let generatedText: string | null = null;
       let lastErrorMessage = "";
+      let activeModelUsed = "";
+      let wasFlipped = false;
 
-      // Cascade across compatible Gemini models if one is under high demand (503) or migrated (404)
-      for (const targetModel of GEMINI_CASCADE_MODELS) {
+      // Dynamic model pool prioritizing 3.5 Flash and auto-flipping on traffic buffer / token limits
+      const prioritizedPool = getPrioritizedModelPool();
+
+      for (let i = 0; i < prioritizedPool.length; i++) {
+        const targetModel = prioritizedPool[i];
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
           const response = await fetch(url, {
@@ -682,15 +777,20 @@ export async function sendAIMessage({
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) {
               generatedText = text;
+              activeModelUsed = targetModel;
+              wasFlipped = i > 0 || targetModel !== "gemini-3.5-flash";
+              clearModelCooldown(targetModel);
               break;
             }
           } else {
             const errJson = await response.json().catch(() => ({}));
             lastErrorMessage = errJson?.error?.message || `HTTP ${response.status}`;
             console.warn(`Gemini model ${targetModel} status ${response.status}, cascading...`);
+            markModelCooldown(targetModel, response.status, lastErrorMessage);
           }
         } catch (mErr: any) {
           lastErrorMessage = mErr?.message || String(mErr);
+          markModelCooldown(targetModel, 500, lastErrorMessage);
         }
       }
 
@@ -718,6 +818,8 @@ export async function sendAIMessage({
 
         return {
           content: generatedText,
+          modelUsed: activeModelUsed,
+          wasFlipped,
           flashcards,
           quizQuestions,
         };

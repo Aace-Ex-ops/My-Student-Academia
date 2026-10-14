@@ -27,6 +27,7 @@ import {
   X,
   GraduationCap,
   Info,
+  Zap,
 } from "lucide-react";
 import { User } from "@/types";
 import {
@@ -44,6 +45,7 @@ import {
   clearStoredChatHistory,
   sendAIMessage,
   DEFAULT_AI_CONFIG,
+  getModelPoolHealth,
 } from "@/lib/aiStudyService";
 import { getLocalEnrollments, StoredEnrollment } from "@/lib/enrollmentStorage";
 import { EXPANDED_COURSE_CATALOG } from "@/lib/courseCatalogData";
@@ -605,6 +607,8 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
         timestamp: Date.now(),
         mode: currentMode,
         courseCode: selectedCourseCode || undefined,
+        modelUsed: response.modelUsed,
+        wasFlipped: response.wasFlipped,
         flashcards: response.flashcards,
         quizQuestions: response.quizQuestions,
       };
@@ -789,7 +793,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
               />
               <span>
                 {isCloudConnected
-                  ? `⚡ Gemini 1.5 Flash Connected`
+                  ? `⚡ Gemini 3.5 Flash Active (+ Auto-Flip Balancer)`
                   : `🧠 Built-in Academic Engine (Free)`}
               </span>
             </div>
@@ -928,7 +932,27 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
                       </>
                     )}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {msg.modelUsed && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border flex items-center gap-1 ${
+                          msg.wasFlipped
+                            ? "bg-amber-950/40 border-amber-500/40 text-amber-300"
+                            : "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
+                        }`}
+                        title={
+                          msg.wasFlipped
+                            ? "Auto-flipped model to avoid token exhaustion / high-demand buffer"
+                            : "Served by active model"
+                        }
+                      >
+                        <Zap className="w-2.5 h-2.5" />
+                        <span>{msg.modelUsed}</span>
+                        {msg.wasFlipped && (
+                          <span className="text-[9px] uppercase tracking-wide opacity-80">(auto-flipped)</span>
+                        )}
+                      </span>
+                    )}
                     {msg.courseCode && (
                       <span className="px-1.5 py-0.5 rounded bg-black/30 text-[10px] font-bold text-white/90">
                         {msg.courseCode}
@@ -1207,7 +1231,7 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
                     }`}
                   >
                     <div className="font-bold text-sm text-[#FF6D1F]">Google Gemini</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Gemini 1.5 Flash (100% Free)</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Gemini 3.5 Flash + Auto-Balancer</div>
                   </button>
 
                   <button
@@ -1224,6 +1248,31 @@ I am your intelligent copilot for coursework, lecture notes, and exam mastery.
                   </button>
                 </div>
               </div>
+
+              {/* Token Safeguard & Multi-Model Pool Monitor */}
+              {tempProvider === "gemini" && (
+                <div className="p-3.5 rounded-xl border border-[#F5E7C6]/15 bg-[#16151E] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                    <span className="flex items-center gap-1.5 text-[#FF6D1F]">
+                      <Zap className="w-3.5 h-3.5" /> Token Safeguard & Auto-Flipper
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Dynamic Balancer Active</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Prioritizes <strong>Gemini 3.5 Flash</strong>. If it experiences high-demand buffering (503) or token exhaustion (429), requests automatically flip across <strong>Gemini 3 Flash</strong>, <strong>Flash-Lite</strong>, and <strong>Gemma</strong> to prevent interruptions.
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                    {Object.entries(getModelPoolHealth()).slice(0, 4).map(([m, h]) => (
+                      <div key={m} className="p-2 rounded-lg bg-[#0E0E13] border border-white/5 flex items-center justify-between">
+                        <span className="font-mono text-slate-300 truncate max-w-[120px]">{m}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${h.status === 'ready' ? 'bg-emerald-950/40 text-emerald-400' : 'bg-amber-950/40 text-amber-400'}`}>
+                          {h.status === 'ready' ? 'Ready' : `Buffered (${h.remainingSec}s)`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* API Key Input (if not offline) */}
               {tempProvider !== "offline" && (
