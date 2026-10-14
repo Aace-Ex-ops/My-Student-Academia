@@ -201,13 +201,28 @@ export function ProfileDropdown({
               </div>
             </div>
 
-            {/* Menu Option 1: Profile */}
+            {/* Menu Option 1: Profile / Dashboard Link */}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                setIsOpen(false);
+                if (activeUser.role === "INSTRUCTOR") {
+                  navigate("/instructor");
+                } else if (activeUser.role === "ADMIN") {
+                  navigate("/admin");
+                } else {
+                  navigate("/dashboard");
+                }
+              }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-[#FAF3E1]/80 hover:text-[#FAF3E1] hover:bg-[#1A1A22] transition-colors cursor-pointer"
             >
               <User className="w-4 h-4 text-[#FF6D1F]" />
-              <span>Student Profile</span>
+              <span>
+                {activeUser.role === "INSTRUCTOR"
+                  ? "Faculty Dashboard"
+                  : activeUser.role === "ADMIN"
+                  ? "Admin Console"
+                  : "Student Profile"}
+              </span>
             </button>
 
             {/* Menu Option 2: Term Status */}

@@ -13,6 +13,7 @@ import { InstructorPage } from './pages/InstructorPage';
 import { FacultyChatPage } from './pages/FacultyChatPage';
 import { QuizzesPage } from './pages/QuizzesPage';
 import { AIAssistantPage } from './pages/AIAssistantPage';
+import { PortalAuthPage } from './pages/PortalAuthPage';
 import { AdminPage } from './pages/AdminPage';
 import { User, OnboardingData } from './types';
 import { apiFetch } from './lib/api';
@@ -139,7 +140,11 @@ export function AppContent() {
     }).catch((e) => console.warn('Backend update profile notice:', e));
   };
 
-  const showLayoutHeaders = location.pathname !== '/' && location.pathname !== '/auth' && location.pathname !== '/onboarding';
+  const showLayoutHeaders =
+    location.pathname !== '/' &&
+    location.pathname !== '/auth' &&
+    location.pathname !== '/onboarding' &&
+    location.pathname !== '/portal-login';
   const isAIAssistant = location.pathname === '/ai-assistant';
 
   return (
@@ -171,6 +176,7 @@ export function AppContent() {
           <Routes>
             <Route path="/" element={<LandingPage onLoginClick={() => navigate('/auth')} />} />
             <Route path="/auth" element={<AuthPage currentUser={currentUser || undefined} onLoginUser={(user: User) => setCurrentUser(user)} users={users} />} />
+            <Route path="/portal-login" element={<PortalAuthPage currentUser={currentUser} onLoginUser={(user: User) => setCurrentUser(user)} />} />
             <Route path="/onboarding" element={<OnboardingPage currentUser={currentUser || undefined} onCompleteOnboarding={handleCompleteOnboarding} />} />
             <Route path="/dashboard" element={<StudentDashboard currentUser={currentUser} />} />
             <Route path="/catalog" element={<CatalogPage currentUser={currentUser} />} />

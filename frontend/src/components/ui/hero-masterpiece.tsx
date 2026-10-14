@@ -398,15 +398,27 @@ export function HeroMasterpiece({ onLoginClick }: HeroMasterpieceProps) {
         </div>
       </div>
 
-      {/* TOP HEADER */}
-      <div className="relative z-20 flex items-center justify-end w-full border-b border-[#F5E7C6]/15 pb-4">
+      {/* TOP HEADER: FACULTY/ADMIN LOGIN (TOP LEFT) & STUDENT LOGIN (TOP RIGHT) */}
+      <div className="relative z-20 flex items-center justify-between w-full border-b border-[#F5E7C6]/15 pb-4">
+        {/* Top Left: Faculty & Admin Portal Login */}
+        <button
+          onClick={() => navigate("/portal-login")}
+          className="px-5 py-2.5 rounded-full bg-[#141414]/90 hover:bg-[#FF6D1F] border border-[#F5E7C6]/30 hover:border-[#FF6D1F] text-xs font-black transition-all duration-300 text-[#FAF3E1] shadow-lg shadow-black/50 hover:shadow-[#FF6D1F]/25 flex items-center gap-2 cursor-pointer group backdrop-blur-md"
+          title="Access Faculty & Institutional Administration Portal"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-[#FF6D1F] group-hover:text-[#FAF3E1] transition-colors" />
+          <span>Faculty & Admin Portal</span>
+        </button>
+
+        {/* Top Right: Student Portal Login */}
         <div className="flex items-center gap-4">
           <button
             onClick={handleLogin}
             className="px-5 py-2.5 rounded-full bg-[#141414]/90 hover:bg-[#FF6D1F] border border-[#F5E7C6]/30 hover:border-[#FF6D1F] text-xs font-black transition-all duration-300 text-[#FAF3E1] shadow-lg shadow-black/50 hover:shadow-[#FF6D1F]/25 flex items-center gap-2 cursor-pointer group backdrop-blur-md"
+            title="Access Student Course Registration Portal"
           >
             <LogIn className="w-3.5 h-3.5 text-[#FF6D1F] group-hover:text-[#FAF3E1] transition-colors" />
-            <span>Login to Portal</span>
+            <span>Student Portal</span>
           </button>
         </div>
       </div>

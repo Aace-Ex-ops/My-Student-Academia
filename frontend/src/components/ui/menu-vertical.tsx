@@ -30,7 +30,9 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
 
   const location = useLocation();
 
-  const menuItems = [
+  const role = currentUser?.role || "STUDENT";
+
+  let menuItems = [
     {
       label: "Dashboard",
       path: "/dashboard",
@@ -67,6 +69,84 @@ export function MenuVertical({ currentUser, onSwitchUser, users = [] }: Vertical
       icon: Bot,
     },
   ];
+
+  if (role === "INSTRUCTOR") {
+    menuItems = [
+      {
+        label: "Faculty Dashboard",
+        path: "/instructor",
+        icon: UserCheck,
+      },
+      {
+        label: "Course Catalog",
+        path: "/catalog",
+        icon: BookOpen,
+      },
+      {
+        label: "Student Messages",
+        path: "/messages",
+        icon: MessageSquare,
+      },
+      {
+        label: "Gradebook & Metrics",
+        path: "/performance",
+        icon: TrendingUp,
+      },
+      {
+        label: "Course Quizzes",
+        path: "/quizzes",
+        icon: CheckSquare,
+      },
+      {
+        label: "AI Copilot",
+        path: "/ai-assistant",
+        icon: Bot,
+      },
+      {
+        label: "Student View",
+        path: "/dashboard",
+        icon: GraduationCap,
+      },
+    ];
+  } else if (role === "ADMIN") {
+    menuItems = [
+      {
+        label: "Admin Console",
+        path: "/admin",
+        icon: UserCheck,
+      },
+      {
+        label: "Course Management",
+        path: "/catalog",
+        icon: BookOpen,
+      },
+      {
+        label: "Faculty Roster",
+        path: "/instructor",
+        icon: UserCheck,
+      },
+      {
+        label: "Institutional Analytics",
+        path: "/performance",
+        icon: TrendingUp,
+      },
+      {
+        label: "Quizzes & Benchmarks",
+        path: "/quizzes",
+        icon: CheckSquare,
+      },
+      {
+        label: "AI Copilot",
+        path: "/ai-assistant",
+        icon: Bot,
+      },
+      {
+        label: "Student View",
+        path: "/dashboard",
+        icon: GraduationCap,
+      },
+    ];
+  }
 
   return (
     <>
